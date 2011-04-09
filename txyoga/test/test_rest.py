@@ -1,5 +1,5 @@
 """
-Tests for the REST API tools.
+Basic tests for REST functionality.
 """
 from functools import partial
 from math import ceil
@@ -10,7 +10,7 @@ from twisted.web.resource import IResource
 from twisted.web import http, http_headers
 
 from txyoga import base, resource
-from txyoga.interface import ICollection, IElement
+from txyoga.interface import ICollection
 from txyoga.serializers import json
 
 
@@ -62,7 +62,7 @@ class _FakeRequest(object):
 
 class CollectionTest(TestCase):
     """
-    Tests that Collections produce results with roughly the right data.
+    Test that Collections produce results with roughly the right data.
     """
     def test_adaptation(self):
         """
@@ -74,6 +74,10 @@ class CollectionTest(TestCase):
 
 
     def test_uniqueElements(self):
+        """
+        Test that adding the same element to a collection more than once
+        results in an error.
+        """
         collection = base.Collection()
         element = base.Element()
         element.name = "Unobtainium"
@@ -89,12 +93,21 @@ _FakeDELETERequest = partial(_FakeRequest, method="DELETE")
 
 
 class _BaseCollectionTest(object):
+    """
+    A base class for tests of a collection.
+    """
     def setUp(self):
         self.collection = self.collectionClass()
         self.resource = IResource(self.collection)
 
 
     def addElements(self, elements=None):
+        """
+        Adds some element to the collection.
+
+        If no elements are specified, create the default elements specified by
+        the elementClass and elementArgs class attributes.
+        """
         if elements is None:
             elements = [self.elementClass(*a) for a in self.elementArgs]
 
@@ -103,15 +116,27 @@ class _BaseCollectionTest(object):
 
 
     def _makeRequest(self, resource, request):
+        """
+        Gets the response to a request.
+        """
         self.request = request
         self.response = resource.render(request)
 
 
     def _decodeResponse(self):
+        """
+        Tries to decode the body of a response.
+        """
         self.responseContent = json.loads(self.response)
 
 
     def _checkContentType(self, expectedContentType="application/json"):
+        """
+        Verifies the content type of a response.
+
+        If the type is ``None``, verifies that the header is not passed. This
+        is intended for cases where an empty response body is expected.
+        """
         headers = self.request.responseHeaders.getRawHeaders("Content-Type")
 
         if expectedContentType is None:
@@ -121,6 +146,10 @@ class _BaseCollectionTest(object):
 
 
     def _checkBadRequest(self, expectedCode):
+        """
+        Tests that a failed request has a particular response code, and that
+        the response content has an error message and some details in it.
+        """
         self.assertEqual(self.request.code, expectedCode)
         self.assertIn("errorMessage", self.responseContent)
         self.assertIn("errorDetails", self.responseContent)
@@ -149,7 +178,7 @@ class _BaseCollectionTest(object):
 
     def updateElement(self, name, body, headers=None):
         """
-        Tries to update an element.
+        Update an element.
 
         For a successful update, the headers should contain a Content-Type.
         """
@@ -160,7 +189,7 @@ class _BaseCollectionTest(object):
 
     def deleteElement(self, name):
         """
-        Tries to delete an element.
+        Delete an element.
         """
         request = _FakeDELETERequest()
         elementResource = self.resource.getChild(name, request)
@@ -170,6 +199,9 @@ class _BaseCollectionTest(object):
 
 class _BaseUnpaginatedCollectionTest(_BaseCollectionTest):
     def test_getElements_none(self):
+        """
+        Tests that an empty collection reports no elements.
+        """
         self.getElements()
         results = self.responseContent["results"]
         self.assertEqual(len(results), 0)
@@ -242,7 +274,7 @@ class Zoo(base.Collection):
     exposedElementAttributes = "name", "species"
 
     pageSize = 3
-    maxPageSize= 5
+    maxPageSize = 5
 
 
 
@@ -268,6 +300,13 @@ class PartlyExposingCollectionTest(_BaseUnpaginatedCollectionTest, TestCase):
 
 
     def test_exposedAttributes(self):
+        """
+        Test that all of the exposed attributes (and *only* the exposed
+        attributes) of an element are exposed when querying the collection.
+
+        When the element is queried directly, it correctly exposes all of its
+        attributes.
+        """
         self.addElements()
         self.getElements()
         results = self.responseContent["results"]
@@ -300,7 +339,17 @@ class _BasePaginatedCollectionTest(_BaseCollectionTest):
 
 
 class PaginatedCollectionTest(_BasePaginatedCollectionTest, TestCase):
+    """
+    Tests for paginated collections.
+    """
     def test_firstPage(self):
+        """
+        Test the first page of a collection.
+
+        It should be of the correct size, not have a link to a previous page
+        (since there is none), and have a link to the next page (since there
+        is one).
+        """
         self.addElements()
         self.getElements()
 
@@ -312,6 +361,10 @@ class PaginatedCollectionTest(_BasePaginatedCollectionTest, TestCase):
 
 
     def test_followPages(self):
+        """
+        Tests that the entire collection can be accessed by walking down all
+        the pages sequentially.
+        """
         self.addElements()
         elementsPerPage = []
 
@@ -319,9 +372,17 @@ class PaginatedCollectionTest(_BasePaginatedCollectionTest, TestCase):
         pages = int(ceil(float(len(self.elementArgs))/pageSize))
 
         def hashable(d):
+            """
+            A hashable version of an element.
+
+            Used to check if an element has been seen before or not.
+            """
             return tuple(sorted(d.itervalues()))
 
         def isLast(index):
+            """
+            Checks if this is the last index or not.
+            """
             return index == pages - 1
 
         args = {}
@@ -360,7 +421,7 @@ class PaginatedCollectionTest(_BasePaginatedCollectionTest, TestCase):
 
 class SoftwareProject(base.Collection):
     """
-    A project that consists of a bunch of bikesheds.
+    A software project that consists of a bunch of bikesheds.
     """
 
 
@@ -380,6 +441,9 @@ class Bikeshed(base.Element):
 
 
 class _BikeshedTest(_BaseCollectionTest):
+    """
+    Tests that use bikesheds.
+    """
     collectionClass = SoftwareProject
     elementClass = Bikeshed
     elementArgs = [("north", "red"),
@@ -389,7 +453,10 @@ class _BikeshedTest(_BaseCollectionTest):
 
 
 
-class ElementUpdateTestCase(_BikeshedTest, TestCase):
+class ElementUpdatingTests(_BikeshedTest, TestCase):
+    """
+    Tests to verify if updating an element works as expected.
+    """
     uselessUpdateBody = {"color": "green"}
     usefulUpdateBody = {"maximumOccupancy": 200}
 
@@ -403,8 +470,7 @@ class ElementUpdateTestCase(_BikeshedTest, TestCase):
 
     def _test_updateElement(self, expectedStatusCode=None):
         """
-        I am extremely important and must change the color of the very first
-        bikeshed I can find.
+        Tries to change the color of a bikeshed.
         """
         name = self.elementArgs[0][0]
         self.getElement(name)
@@ -415,7 +481,7 @@ class ElementUpdateTestCase(_BikeshedTest, TestCase):
 
         expectFailure = expectedStatusCode is not None
         if expectFailure:
-            # An failed PUT has a response body
+            # A failed PUT has a response body
             self._checkContentType("application/json")
             self._decodeResponse()
             self._checkBadRequest(expectedStatusCode)
@@ -429,23 +495,37 @@ class ElementUpdateTestCase(_BikeshedTest, TestCase):
 
 
     def test_updateElement(self):
+        """
+        Test that updating an element works.
+        """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self._test_updateElement()
 
 
     def test_updateElement_missingContentType(self):
+        """
+        Test that trying to update an element when not specifying the content
+        type of the update content fails.
+        """
         self._test_updateElement(http.UNSUPPORTED_MEDIA_TYPE)
 
 
     def test_updateElement_badContentType(self):
+        """
+        Test that trying to update an element when specifying a bogus content
+        type of the update content fails.
+        """
         self.headers.setRawHeaders("Content-Type", ["ZALGO/ZALGO"])
         self._test_updateElement(http.UNSUPPORTED_MEDIA_TYPE)
 
 
     def test_updateElement_nonUpdatableAttribute(self):
         """
-        I will try to make the bikeshed twice as large, which will fail since
-        it is a useful change.
+        Tests that updating an attribute which is not allowed to be updated
+        responds that that operation is forbidden.
+
+        Try to make the bikeshed twice as large, which won't work because that
+        would be a useful change.
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self.body = self.usefulUpdateBody
@@ -454,8 +534,11 @@ class ElementUpdateTestCase(_BikeshedTest, TestCase):
 
     def test_updateElement_partiallyUpdatableAttributes(self):
         """
-        I will try to make the bikeshed twice as large and change its color.
-        Both will fail, since the useful operation blocks the entire change.
+        Tests that updates are atomic; when part of an update is not allowed,
+        the entire update does not happen.
+
+        Try to make the bikeshed twice as large and change its color.  Both
+        will fail, since the useful operation blocks the entire change.
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self.body = dict(self.usefulUpdateBody)
@@ -464,7 +547,7 @@ class ElementUpdateTestCase(_BikeshedTest, TestCase):
 
 
 
-class ElementDeletionTestCase(_BikeshedTest, TestCase):
+class ElementDeletionTests(_BikeshedTest, TestCase):
     """
     Tests deleting elements from a collection.
     """
@@ -539,37 +622,73 @@ class _BaseFailingRequestTest(_BasePaginatedCollectionTest):
 
 
 
-class BadRequestTest(_BaseFailingRequestTest, TestCase):
+class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
+    """
+    Test the failures of bad requests to a collection.
+    """
     def test_multipleStarts(self):
+        """
+        Providing multiple start values when requesting a page of a collection
+        results in an error.
+        """
         self._test_badCollectionRequest({"start": [0, 1]})
 
 
     def test_multipleStops(self):
+        """
+        Providing multiple stop values when requesting a page of a collection
+        results in an error.
+        """
         self._test_badCollectionRequest({"stop": [0, 1]})
 
 
     def test_negativePageSize(self):
+        """
+        A request with a stop value lower than the start value (supposedly
+        requesting a negative number of elements) when requesting a page of a
+        collection results in an error.
+        """
         self._test_badCollectionRequest({"start": [0], "stop": [-1]})
 
 
     def test_pageTooBig(self):
+        """
+        Asking for a number of elements larger than the maximum page size when
+        requesting a page of a collection results in an error.
+        """
         stop = self.collectionClass.maxPageSize + 1
         self._test_badCollectionRequest({"start": [0], "stop": [stop]})
 
 
     def test_startNotInteger(self):
+        """
+        Providing a start value that isn't an integer when requesting a page
+        of a collection results in an error.
+        """
         self._test_badCollectionRequest({"start": ["ZALGO"]})
 
 
     def test_stopNotInteger(self):
+        """
+        Providing a stop value that isn't an integer when requesting a page
+        of a collection results in an error.
+        """
         self._test_badCollectionRequest({"stop": ["ZALGO"]})
 
 
-    def test_bothNotInteger(self):
+    def test_startAndStopNotInteger(self):
+        """
+        Providing a start value and a stop value that aren't integers when
+        requesting a page of a collection results in an error.
+        """
         self._test_badCollectionRequest({"start": ["ZALGO"], "stop": ["ZALGO"]})
 
 
     def test_badAcceptHeader(self):
+        """
+        Providing a bogus Accept header when requesting a page results in an
+        error.
+        """
         headers = http_headers.Headers()
         headers.setRawHeaders("Accept", ["text/bogus"])
         self._test_badCollectionRequest(None, headers, http.NOT_ACCEPTABLE)
@@ -577,17 +696,32 @@ class BadRequestTest(_BaseFailingRequestTest, TestCase):
 
 
 class BadElementRequestTests(_BaseFailingRequestTest, TestCase):
+    """
+    Test the failures of bad requests for a particular element.
+    """
     def test_missingElement(self):
+        """
+        Requesting a missing element, results in a response that the element
+        was not found (404).
+        """
         self._test_badElementRequest("bogus", None, None, http.NOT_FOUND)
 
 
     def test_missingElement_bogusAcceptHeader(self):
+        """
+        Requesting a missing element results in a response that the element
+        was not found, even with a bogus Accept header.
+        """
         headers = http_headers.Headers()
         headers.setRawHeaders("Accept", ["text/bogus"])
         self._test_badElementRequest("bogus", None, headers, http.NOT_FOUND)
 
 
     def test_getElement_bogusAcceptHeader(self):
+        """
+        Requesting an element with a bogus Accept header results in a response
+        that the resquest was not acceptable.
+        """
         headers = http_headers.Headers()
         headers.setRawHeaders("Accept", ["text/bogus"])
         name, _, _ = self.elementArgs[0]
@@ -595,7 +729,10 @@ class BadElementRequestTests(_BaseFailingRequestTest, TestCase):
 
 
 
-class JSONEncoderTest(TestCase):
+class JSONEncoderTests(TestCase):
+    """
+    Test JSON encoding.
+    """
     def test_raiseForUnserializableType(self):
         """
         When given an unserializable type, the serializer should raise
