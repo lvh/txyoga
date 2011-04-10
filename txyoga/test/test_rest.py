@@ -3,7 +3,6 @@
 """
 Basic tests for REST functionality.
 """
-from functools import partial
 from math import ceil
 from urlparse import urlsplit, parse_qsl
 
@@ -11,55 +10,10 @@ from twisted.trial.unittest import TestCase
 from twisted.web.resource import IResource
 from twisted.web import http, http_headers
 
-from txyoga import base, resource
+from txyoga import base
 from txyoga.interface import ICollection
 from txyoga.serializers import json
-
-
-
-BASE_URL = "http://localhost"
-
-
-
-class _FakeRequest(object):
-    """
-    Mimics a twisted.web.server.Request, poorly.
-    """
-    def __init__(self, args=None, body=None, method="GET",
-                 prePathURL=BASE_URL, requestHeaders=None):
-        self.args = args if args is not None else {}
-
-        if body is not None:
-            self.body = body
-
-        self.prePathURL = lambda: prePathURL
-
-        # we're always directly aimed at a resource and nobody is doing any
-        # postpath-related stuff, so let's just pretend it's always emtpy...
-        self.postpath = []
-
-        if requestHeaders is not None:
-            self.requestHeaders = requestHeaders
-        else:
-            self.requestHeaders = http_headers.Headers()
-        self.responseHeaders = http_headers.Headers()
-        self.method = method
-
-
-    def setResponseCode(self, code):
-        self.code = code
-
-
-    def getHeader(self, name):
-        # TODO: twisted ticket for inconsistent terminology (name/key)
-        value = self.requestHeaders.getRawHeaders(name)
-        if value is not None:
-            return value[-1]
-
-
-    def setHeader(self, name, value):
-        self.responseHeaders.setRawHeaders(name, [value])
-
+from txyoga.test import util, collections
 
 
 class CollectionTest(TestCase):
@@ -89,117 +43,7 @@ class CollectionTest(TestCase):
 
 
 
-_FakePUTRequest = partial(_FakeRequest, method="PUT")
-_FakeDELETERequest = partial(_FakeRequest, method="DELETE")
-
-
-
-class _BaseCollectionTest(object):
-    """
-    A base class for tests of a collection.
-    """
-    def setUp(self):
-        self.collection = self.collectionClass()
-        self.resource = IResource(self.collection)
-
-
-    def addElements(self, elements=None):
-        """
-        Adds some element to the collection.
-
-        If no elements are specified, create the default elements specified by
-        the elementClass and elementArgs class attributes.
-        """
-        if elements is None:
-            elements = [self.elementClass(*a) for a in self.elementArgs]
-
-        for e in elements:
-            self.collection.add(e)
-
-
-    def _makeRequest(self, resource, request):
-        """
-        Gets the response to a request.
-        """
-        self.request = request
-        self.response = resource.render(request)
-
-
-    def _decodeResponse(self):
-        """
-        Tries to decode the body of a response.
-        """
-        self.responseContent = json.loads(self.response)
-
-
-    def _checkContentType(self, expectedContentType="application/json"):
-        """
-        Verifies the content type of a response.
-
-        If the type is ``None``, verifies that the header is not passed. This
-        is intended for cases where an empty response body is expected.
-        """
-        headers = self.request.responseHeaders.getRawHeaders("Content-Type")
-
-        if expectedContentType is None:
-            self.assertEqual(headers, None)
-        else:
-            self.assertEqual(headers, [expectedContentType])
-
-
-    def _checkBadRequest(self, expectedCode):
-        """
-        Tests that a failed request has a particular response code, and that
-        the response content has an error message and some details in it.
-        """
-        self.assertEqual(self.request.code, expectedCode)
-        self.assertIn("errorMessage", self.responseContent)
-        self.assertIn("errorDetails", self.responseContent)
-
-
-    def getElements(self, args=None, headers=None):
-        """
-        Gets a bunch of elements from a collection.
-        """
-        request = _FakeRequest(args=args, requestHeaders=headers)
-        self._makeRequest(self.resource, request)
-        self._checkContentType()
-        self._decodeResponse()
-
-
-    def getElement(self, name, args=None, headers=None):
-        """
-        Gets a particular element from a collection.
-        """
-        request = _FakeRequest(args=args, requestHeaders=headers)
-        elementResource = self.resource.getChild(name, request)
-        self._makeRequest(elementResource, request)
-        self._checkContentType()
-        self._decodeResponse()
-
-
-    def updateElement(self, name, body, headers=None):
-        """
-        Update an element.
-
-        For a successful update, the headers should contain a Content-Type.
-        """
-        request = _FakePUTRequest(body=body, requestHeaders=headers)
-        elementResource = self.resource.getChild(name, request)
-        self._makeRequest(elementResource, request)
-
-
-    def deleteElement(self, name):
-        """
-        Delete an element.
-        """
-        request = _FakeDELETERequest()
-        elementResource = self.resource.getChild(name, request)
-        self._makeRequest(elementResource, request)
-
-
-
-class _BaseUnpaginatedCollectionTest(_BaseCollectionTest):
+class _BaseUnpaginatedCollectionTest(util._BaseCollectionTest):
     def test_getElements_none(self):
         """
         Tests that an empty collection reports no elements.
@@ -269,38 +113,11 @@ class SimpleCollectionTest(_BaseUnpaginatedCollectionTest, TestCase):
 
 
 
-class Zoo(base.Collection):
+class PartlyExposingCollectionTest(collections._PartlyExposingCollectionMixin,
+                                   _BaseUnpaginatedCollectionTest, TestCase):
     """
-    A zoo.
+    Test that exposing some attributes works.
     """
-    exposedElementAttributes = "name", "species"
-
-    pageSize = 3
-    maxPageSize = 5
-
-
-
-class Animal(base.Element):
-    """
-    An animal in captivity.
-    """
-    exposedAttributes = "name", "species", "diet"
-
-    def __init__(self, name, species, diet):
-        self.name = name
-        self.species = species
-        self.diet = diet
-
-
-
-class PartlyExposingCollectionTest(_BaseUnpaginatedCollectionTest, TestCase):
-    collectionClass = Zoo
-    elementClass = Animal
-    elementArgs = [("Pumbaa", "warthog", "bugs"),
-                   ("Simba", "lion", "warthogs"),
-                   ("Timon", "meerkat", "bugs")]
-
-
     def test_exposedAttributes(self):
         """
         Test that all of the exposed attributes (and *only* the exposed
@@ -313,34 +130,20 @@ class PartlyExposingCollectionTest(_BaseUnpaginatedCollectionTest, TestCase):
         self.getElements()
         results = self.responseContent["results"]
         for result in results:
-            for attribute in Animal.exposedAttributes:
-                if attribute in Zoo.exposedElementAttributes:
+            for attribute in self.elementClass.exposedAttributes:
+                if attribute in self.collectionClass.exposedElementAttributes:
                     self.assertIn(attribute, result)
                 else:
                     self.assertNotIn(attribute, result)
 
             self.getElement(result["name"])
 
-            for attribute in Animal.exposedAttributes:
+            for attribute in self.elementClass.exposedAttributes:
                 self.assertIn(attribute, self.responseContent)
 
 
 
-class _BasePaginatedCollectionTest(_BaseCollectionTest):
-    collectionClass = Zoo
-    elementClass = Animal
-    elementArgs = [("Pumbaa", "warthog", "bugs"),
-                   ("Simba", "lion", "warthogs"),
-                   ("Timon", "meerkat", "bugs"),
-                   ("Rafiki", "mandrill", "strange yellow fruit"),
-                   ("Zazu", "hornbill", "nondescript berries"),
-                   ("Shenzi", "hyena", "lion cubs"),
-                   ("Banzai", "hyena", "lion cubs"),
-                   ("Ed", "hyena", "whatever he can get, really")]
-
-
-
-class PaginatedCollectionTest(_BasePaginatedCollectionTest, TestCase):
+class PaginatedCollectionTest(collections._PaginatedCollectionMixin, TestCase):
     """
     Tests for paginated collections.
     """
@@ -383,79 +186,50 @@ class PaginatedCollectionTest(_BasePaginatedCollectionTest, TestCase):
 
         def isLast(index):
             """
-            Checks if this is the last index or not.
+            Checks if this is the index of the last page.
             """
             return index == pages - 1
+
+        def nextPageArgs():
+            """
+            Gets the args used to get the next page
+            """
+            nextURL = self.responseContent["next"]
+            _, _, _, qs, _ = urlsplit(nextURL)
+            nextQuery = parse_qsl(qs)
+
+            nextQueryKeys = [key for key, _ in nextQuery]
+            for key in ("start", "stop"):
+                self.assertEqual(nextQueryKeys.count(key), 1)
+
+            return dict((k, [v]) for k, v in nextQuery)
 
         args = {}
 
         for index in xrange(pages):
-            theseElements = set()
-            elementsPerPage.append(theseElements)
+            seenElements = set()
+            elementsPerPage.append(seenElements)
 
             self.getElements(args)
-            newElements = self.responseContent["results"]
+            newElements = map(hashable, self.responseContent["results"])
 
             for element in newElements:
-                element = hashable(element)
-                self.assertNotIn(element, theseElements,
-                    "duplicate element in page")
-                theseElements.add(element)
+                # Test that the element is not duplicated in this page
+                self.assertNotIn(element, seenElements)
+                seenElements.add(element)
 
-                for previousElements in elementsPerPage[:-1]:
-                    self.assertNotIn(element, previousElements,
-                        "duplicate element in previous page")
+                # Test that the element is not duplicated in a previous page
+                for previousPageElements in elementsPerPage[:-1]:
+                    self.assertNotIn(element, previousPageElements)
 
-                nextURL = self.responseContent["next"]
-                if not isLast(index):
-                    _, _, _, qs, _ = urlsplit(nextURL)
-                    nextQuery = parse_qsl(qs)
-                    nextQueryKeys = [key for key, _ in nextQuery]
-                    for x in ("start", "stop"):
-                        self.assertEqual(nextQueryKeys.count(x), 1,
-                            "next page url has duplicate %s" % (x,))
-                    args = dict((k, [v]) for k, v in nextQuery)
-                else:
-                    self.assertIdentical(self.responseContent["next"], None,
-                        "last page links to nonexistent next page")
+            if not isLast(index):
+                args = nextPageArgs()
+
+        self.assertIdentical(self.responseContent["next"], None)
 
 
 
-class SoftwareProject(base.Collection):
-    """
-    A software project that consists of a bunch of bikesheds.
-    """
-
-
-
-class Bikeshed(base.Element):
-    """
-    A bikeshed.
-    """
-    exposedAttributes = "name", "color", "maximumOccupancy"
-    updatableAttributes = "color",
-
-    def __init__(self, name, color):
-        self.name = name
-        self.color = color
-        self.maximumOccupancy = 100
-
-
-
-class _BikeshedTest(_BaseCollectionTest):
-    """
-    Tests that use bikesheds.
-    """
-    collectionClass = SoftwareProject
-    elementClass = Bikeshed
-    elementArgs = [("north", "red"),
-                   ("east", "blue"),
-                   ("south", "green"),
-                   ("west", "yellow")]
-
-
-
-class ElementUpdatingTests(_BikeshedTest, TestCase):
+class ElementUpdatingTests(collections._UpdatableCollectionMixin, TestCase):
     """
     Tests to verify if updating an element works as expected.
     """
@@ -464,7 +238,7 @@ class ElementUpdatingTests(_BikeshedTest, TestCase):
 
 
     def setUp(self):
-        _BikeshedTest.setUp(self)
+        collections._UpdatableCollectionMixin.setUp(self)
         self.addElements()
         self.headers = http_headers.Headers()
         self.body = self.uselessUpdateBody
@@ -549,12 +323,13 @@ class ElementUpdatingTests(_BikeshedTest, TestCase):
 
 
 
-class ElementDeletionTests(_BikeshedTest, TestCase):
+class ElementDeletionTests(collections._UpdatableCollectionMixin, TestCase):
+    # XXX: does this need to be _UpdatableCollectionMixin?
     """
     Tests deleting elements from a collection.
     """
     def setUp(self):
-        _BikeshedTest.setUp(self)
+        collections._UpdatableCollectionMixin.setUp(self)
         self.addElements()
 
 
@@ -596,149 +371,3 @@ class ElementDeletionTests(_BikeshedTest, TestCase):
         self._checkSuccessfulDeletion()
         self.deleteElement(name)
         self._checkFailedDeletion()
-
-
-
-class _BaseFailingRequestTest(_BasePaginatedCollectionTest):
-    """
-    Base class for classes that make failing requests.
-    """
-    def _test_badCollectionRequest(self, args=None, headers=None,
-                         expectedCode=http.BAD_REQUEST):
-        """
-        A request for a collection that's expected to fail.
-        """
-        self.addElements()
-        self.getElements(args, headers)
-        self._checkBadRequest(expectedCode)
-
-
-    def _test_badElementRequest(self, name, args=None, headers=None,
-                                expectedCode=http.BAD_REQUEST):
-        """
-        A request for a particular element that's expected to fail.
-        """
-        self.addElements()
-        self.getElement(name, args, headers)
-        self._checkBadRequest(expectedCode)
-
-
-
-class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
-    """
-    Test the failures of bad requests to a collection.
-    """
-    def test_multipleStarts(self):
-        """
-        Providing multiple start values when requesting a page of a collection
-        results in an error.
-        """
-        self._test_badCollectionRequest({"start": [0, 1]})
-
-
-    def test_multipleStops(self):
-        """
-        Providing multiple stop values when requesting a page of a collection
-        results in an error.
-        """
-        self._test_badCollectionRequest({"stop": [0, 1]})
-
-
-    def test_negativePageSize(self):
-        """
-        A request with a stop value lower than the start value (supposedly
-        requesting a negative number of elements) when requesting a page of a
-        collection results in an error.
-        """
-        self._test_badCollectionRequest({"start": [0], "stop": [-1]})
-
-
-    def test_pageTooBig(self):
-        """
-        Asking for a number of elements larger than the maximum page size when
-        requesting a page of a collection results in an error.
-        """
-        stop = self.collectionClass.maxPageSize + 1
-        self._test_badCollectionRequest({"start": [0], "stop": [stop]})
-
-
-    def test_startNotInteger(self):
-        """
-        Providing a start value that isn't an integer when requesting a page
-        of a collection results in an error.
-        """
-        self._test_badCollectionRequest({"start": ["ZALGO"]})
-
-
-    def test_stopNotInteger(self):
-        """
-        Providing a stop value that isn't an integer when requesting a page
-        of a collection results in an error.
-        """
-        self._test_badCollectionRequest({"stop": ["ZALGO"]})
-
-
-    def test_startAndStopNotInteger(self):
-        """
-        Providing a start value and a stop value that aren't integers when
-        requesting a page of a collection results in an error.
-        """
-        self._test_badCollectionRequest({"start": ["ZALGO"], "stop": ["ZALGO"]})
-
-
-    def test_badAcceptHeader(self):
-        """
-        Providing a bogus Accept header when requesting a page results in an
-        error.
-        """
-        headers = http_headers.Headers()
-        headers.setRawHeaders("Accept", ["text/bogus"])
-        self._test_badCollectionRequest(None, headers, http.NOT_ACCEPTABLE)
-
-
-
-class BadElementRequestTests(_BaseFailingRequestTest, TestCase):
-    """
-    Test the failures of bad requests for a particular element.
-    """
-    def test_missingElement(self):
-        """
-        Requesting a missing element, results in a response that the element
-        was not found (404).
-        """
-        self._test_badElementRequest("bogus", None, None, http.NOT_FOUND)
-
-
-    def test_missingElement_bogusAcceptHeader(self):
-        """
-        Requesting a missing element results in a response that the element
-        was not found, even with a bogus Accept header.
-        """
-        headers = http_headers.Headers()
-        headers.setRawHeaders("Accept", ["text/bogus"])
-        self._test_badElementRequest("bogus", None, headers, http.NOT_FOUND)
-
-
-    def test_getElement_bogusAcceptHeader(self):
-        """
-        Requesting an element with a bogus Accept header results in a response
-        that the resquest was not acceptable.
-        """
-        headers = http_headers.Headers()
-        headers.setRawHeaders("Accept", ["text/bogus"])
-        name, _, _ = self.elementArgs[0]
-        self._test_badElementRequest(name, None, headers, http.NOT_ACCEPTABLE)
-
-
-
-class JSONEncoderTests(TestCase):
-    """
-    Test JSON encoding.
-    """
-    def test_raiseForUnserializableType(self):
-        """
-        When given an unserializable type, the serializer should raise
-        TypeError instead of failing silently.
-        """
-        # Assumes TestCases aren't JSON serializable. Sounds reasonable?
-        self.assertRaises(TypeError, resource.jsonEncode, self)
