@@ -9,7 +9,7 @@ from twisted.trial.unittest import TestCase
 from txyoga.test import collections
 
 
-class _BaseFailingRequestTest(collections._PaginatedCollectionMixin):
+class _BaseFailingRequestTest(collections.PaginatedCollectionMixin):
     """
     Base class for classes that make failing requests.
     """
