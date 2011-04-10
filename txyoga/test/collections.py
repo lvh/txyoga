@@ -7,6 +7,32 @@ from txyoga import base
 from txyoga.test.util import _BaseCollectionTest
 
 
+
+class Jar(base.Collection):
+    """
+    A cookie jar.
+    """
+
+
+
+class Cookie(base.Element):
+    """
+    A cookie, typically contained in a jar.
+    """
+    def __init__(self, name):
+        self.name = name
+
+
+
+class SimpleCollectionMixin(_BaseCollectionTest):
+    collectionClass = Jar
+    elementClass = Cookie
+    elementArgs = [("chocolateChip",),
+                   ("butter",),
+                   ("gingerbread",)]
+
+
+
 class Zoo(base.Collection):
     """
     A zoo, which contains a bunch of animals.
@@ -33,7 +59,7 @@ class Animal(base.Element):
 
 
 
-class _PaginatedCollectionMixin(_BaseCollectionTest):
+class PaginatedCollectionMixin(_BaseCollectionTest):
     """
     A collection test mixin that produces a paginated collection.
     """
@@ -50,7 +76,11 @@ class _PaginatedCollectionMixin(_BaseCollectionTest):
 
 
 
-class _PartlyExposingCollectionMixin(_BaseCollectionTest):
+class PartialExposureMixin(_BaseCollectionTest):
+    """
+    A collection test mixin with a collection that partially exposes its
+    elements.
+    """
     collectionClass = Zoo
     elementClass = Animal
     elementArgs = [("Pumbaa", "warthog", "bugs"),
@@ -83,7 +113,7 @@ class Bikeshed(base.Element):
 
 
 
-class _UpdatableCollectionMixin(_BaseCollectionTest):
+class UpdatableCollectionMixin(_BaseCollectionTest):
     """
     A mixin for tests that require an updatable collection.
     """
@@ -93,6 +123,3 @@ class _UpdatableCollectionMixin(_BaseCollectionTest):
                    ("east", "blue"),
                    ("south", "green"),
                    ("west", "yellow")]
-
-
-
