@@ -69,3 +69,26 @@ class IElement(Interface):
         """
         Creates a new object with the given state as the new internal state.
         """
+
+
+
+class ISerializableError(Interface):
+    """
+    A serializable error.
+    """
+    responseCode = Attribute(
+        """
+        The HTTP response code for this error.
+        """)
+
+
+    message = Attribute(
+        """
+        A human-readable error message.
+        """)
+
+
+    details = Attribute(
+        """
+        Some error-specific details.
+        """)

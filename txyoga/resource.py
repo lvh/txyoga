@@ -5,16 +5,18 @@ Resources providing the REST API to some objects.
 """
 from urllib import urlencode
 from urlparse import urlsplit, urlunsplit
+from zope.interface import implements
 
 from twisted.web.resource import IResource, Resource
 from twisted.web import http
 
+from txyoga.interface import ISerializableError
 from txyoga.serializers import json
 
 
 class RESTErrorPage(Resource):
     """
-    An alternative to C{ErrorPage} for REST APIs .
+    An alternative to C{ErrorPage} for REST APIs.
 
     Wraps a L{SerializableError}, and produces a pretty serializable form.
     """
@@ -37,6 +39,7 @@ class SerializableError(Exception):
     """
     An error that can be serialized.
     """
+    implements(ISerializableError)
     responseCode = http.BAD_REQUEST
 
     def __init__(self, message, details=None):
