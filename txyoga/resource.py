@@ -5,12 +5,11 @@ Resources providing the REST API to some objects.
 """
 from urllib import urlencode
 from urlparse import urlsplit, urlunsplit
-from zope.interface import implements
 
 from twisted.web.resource import IResource, Resource
 from twisted.web import http
 
-from txyoga.interface import ISerializableError
+from txyoga import errors
 from txyoga.serializers import json
 
 
@@ -35,80 +34,6 @@ class RESTErrorPage(Resource):
 
 
 
-class SerializableError(Exception):
-    """
-    An error that can be serialized.
-    """
-    implements(ISerializableError)
-    responseCode = http.BAD_REQUEST
-
-    def __init__(self, message, details=None):
-        self.message = message
-        self.details = details if details is not None else {}
-
-
-
-class UnsupportedContentTypeError(SerializableError):
-    """
-    Raised when the provided media type is unsupported.
-
-    This happens on POST or PUT.
-    """
-    responseCode = http.UNSUPPORTED_MEDIA_TYPE
-
-    def __init__(self, supportedMimeTypes, providedMimeType):
-        message = "no acceptable decoder available for given MIME type"
-        details = {"supportedMimeTypes": supportedMimeTypes,
-                   "providedMimeType": providedMimeType}
-        SerializableError.__init__(self, message, details)
-
-
-
-class MissingContentType(SerializableError):
-    """
-    Raised when the client forgot to specify the content type.
-    """
-    responseCode = http.UNSUPPORTED_MEDIA_TYPE
-
-    def __init__(self, supportedMimeTypes):
-        message = "request didn't specify a content type"
-        details = {"supportedMimeTypes": supportedMimeTypes}
-        SerializableError.__init__(self, message, details)
-
-
-
-class UnacceptableRequestError(SerializableError):
-    """
-    Raised when the requested resource could not be provided in one of the
-    accepted content types.
-
-    This happens on GET.
-    """
-    responseCode = http.NOT_ACCEPTABLE
-
-    def __init__(self, supportedMimeTypes, acceptedMimeTypes):
-        message = "no acceptable encoder available"
-        details = {"supportedMimeTypes": supportedMimeTypes,
-                   "acceptedMimeTypes": acceptedMimeTypes}
-        SerializableError.__init__(self, message, details)
-
-
-
-class PaginationError(SerializableError):
-    """
-    Raised when there was a problem computing pagination.
-    """
-
-
-
-class MissingResourceError(SerializableError):
-    """
-    Describes a missing resource.
-    """
-    responseCode = http.NOT_FOUND
-
-
-
 class RESTResourceJSONEncoder(json.JSONEncoder):
     """
     A JSON encoder for REST resources.
@@ -117,7 +42,7 @@ class RESTResourceJSONEncoder(json.JSONEncoder):
     L{SerializableError}s.
     """
     def default(self, obj):
-        if isinstance(obj, SerializableError):
+        if isinstance(obj, errors.SerializableError):
             return {"errorMessage": obj.message, "errorDetails": obj.details}
         return json.JSONEncoder.default(self, obj)
 
@@ -159,21 +84,22 @@ class EncodingResource(Resource):
             except KeyError:
                 continue
 
-        raise UnacceptableRequestError(self.encoders.keys(), accepted)
+        raise errors.UnacceptableRequestError(self.encoders.keys(), accepted)
 
 
     def _getDecoder(self, request):
         contentType = request.getHeader("Content-Type")
         if contentType is None:
             supportedTypes = self.decoders.keys()
-            raise MissingContentType(supportedTypes)
+            raise errors.MissingContentType(supportedTypes)
 
         try:
             decoder = self.decoders[contentType]
             return decoder, contentType
         except KeyError:
             supportedTypes = self.decoders.keys()
-            raise UnsupportedContentTypeError(supportedTypes, contentType)
+            raise errors.UnsupportedContentTypeError(supportedTypes,
+                                                     contentType)
 
 
 
@@ -206,15 +132,15 @@ class CollectionResource(EncodingResource):
 
 
     def _missingChild(self, element, request):
-        error = MissingResourceError("no such element %s" % (element,))
+        e = errors.MissingResourceError("no such element %s" % (element,))
 
         try:
             encoder, contentType = self._getEncoder(request)
-        except UnacceptableRequestError:
+        except errors.UnacceptableRequestError:
             contentType = self.defaultMimeType
             encoder = self.encoders[contentType]
 
-        return RESTErrorPage(error, encoder, contentType)
+        return RESTErrorPage(e, encoder, contentType)
 
 
     def render_GET(self, request):
@@ -231,7 +157,7 @@ class CollectionResource(EncodingResource):
             elements = self._collection[start:stop]
             attrs = self._collection.exposedElementAttributes
             results = [element.toState(attrs) for element in elements]
-        except SerializableError, e:
+        except errors.SerializableError, e:
             errorResource = RESTErrorPage(e, encoder, mimeType)
             return errorResource.render(request)
 
@@ -252,19 +178,25 @@ class CollectionResource(EncodingResource):
         except KeyError:
             start = 0
         except ValueError:
-            raise PaginationError("More than one start in query")
+            raise errors.PaginationError("More than one start in query")
 
         try:
             stop, = request.args["stop"]
         except KeyError:
             stop = self._collection.pageSize
         except ValueError:
-            raise PaginationError("More than one stop in query")
+            raise errors.PaginationError("More than one stop in query")
 
         try:
-            start, stop = int(start), int(stop)
+            start = int(start)
         except ValueError:
-            raise PaginationError("Start or stop not (decimal) integers")
+            raise errors.PaginationError("Start not an integer")
+
+        try:
+            stop = int(stop)
+        except ValueError:
+            raise errors.PaginationError("Stop not an integer")
+
 
         return start, stop
 
@@ -281,10 +213,10 @@ class CollectionResource(EncodingResource):
         pageSize = stop - start
 
         if pageSize < 0:
-            raise PaginationError("Bad page size (stop before start)")
+            raise errors.PaginationError("Requested page size is negative")
 
         if pageSize > self._collection.maxPageSize:
-            raise PaginationError("Requested page size too large")
+            raise errors.PaginationError("Requested page size too large")
 
         prevStart, prevStop = max(0, start - pageSize), start
         if prevStart != prevStop:
@@ -322,7 +254,7 @@ class ElementResource(EncodingResource):
             encoder, contentType = self._getEncoder(request)
             state = self._element.toState()
             return encoder(state)
-        except SerializableError, e:
+        except errors.SerializableError, e:
             errorResource = RESTErrorPage(e, encoder, contentType)
             return errorResource.render(request)
 
@@ -333,7 +265,7 @@ class ElementResource(EncodingResource):
             state = decoder(request.body)
             self._element.update(state)
             return ""
-        except SerializableError, e:
+        except errors.SerializableError, e:
             contentType = self.defaultMimeType
             encoder = self.encoders[contentType]
             errorResource = RESTErrorPage(e, encoder, contentType)

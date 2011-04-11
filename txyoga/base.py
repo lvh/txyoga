@@ -5,9 +5,7 @@ Base classes for objects that will be exposed through a REST API.
 """
 from zope.interface import implements
 
-from twisted.web import http
-
-from txyoga import interface, resource
+from txyoga import errors, interface
 
 
 class Element(object):
@@ -28,11 +26,7 @@ class Element(object):
         if attrs is interface.ALL:
             attrs = self.exposedAttributes
 
-        state = {}
-        for attr in attrs:
-            state[attr] = self.getSerializableAttribute(attr)
-
-        return state
+        return dict((a, self.getSerializableAttribute(a)) for a in attrs)
 
 
     def getSerializableAttribute(self, name):
@@ -60,7 +54,7 @@ class Element(object):
         """
         if any(attr not in self.updatableAttributes for attr in state):
             requested, allowed = list(state), self.updatableAttributes
-            raise ForbiddenAttributeUpdateError(requested, allowed)
+            raise errors.ForbiddenAttributeUpdateError(requested, allowed)
 
         for attr, value in state.iteritems():
             setattr(self, attr, value)
@@ -106,15 +100,3 @@ class Collection(object):
             return self._elements[sliceOrIdentifier]
 
         return self._elementsByIdentifier[sliceOrIdentifier]
-
-
-
-class ForbiddenAttributeUpdateError(resource.SerializableError):
-    responseCode = http.FORBIDDEN
-
-
-    def __init__(self, requestedAttributes, updatableAttributes):
-        message = "attribute update not allowed, update aborted"
-        details = {"updatableAttributes": updatableAttributes,
-                   "requestedAttributes": requestedAttributes}
-        resource.SerializableError.__init__(self, message, details)
