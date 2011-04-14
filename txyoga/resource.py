@@ -241,9 +241,9 @@ class ElementResource(EncodingResource):
 
         self._element = element
 
-        for collectionName in element.children:
-            collection = getattr(element, collectionName)
-            self.putChild(collectionName, IResource(collection))
+        for childName in element.children:
+            child = getattr(element, childName)
+            self.putChild(childName, IResource(child))
 
 
     def render_GET(self, request):
