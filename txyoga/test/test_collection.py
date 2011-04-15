@@ -54,6 +54,7 @@ class ElementChildTest(collections.ElementChildMixin, TestCase):
         self.assertEqual(results, expectedResults)
 
 
+
 class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
     """
     A mixin that tests some generic invariants for collections small enough to
