@@ -57,9 +57,17 @@ class ElementChildTest(collections.ElementChildMixin, TestCase):
 
 class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
     """
-    A mixin that tests some generic invariants for collections small enough to
-    fit in a single page.
+    Test some generic invariants for collections small enough to fit
+    in a single page.
     """
+    def _checkPaginationLinks(self):
+        """
+        Verify that the response doesn't have a previous or a next page.
+        """
+        self.assertIdentical(self.responseContent["next"], None)
+        self.assertIdentical(self.responseContent["prev"], None)
+
+
     def test_getElements_none(self):
         """
         Tests that an empty collection reports no elements.
@@ -69,6 +77,8 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
         results = self.responseContent["results"]
         self.assertEqual(len(results), 0)
 
+        self._checkPaginationLinks()
+
 
     def test_getElements_many(self):
         """
@@ -77,8 +87,11 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
         """
         self.addElements()
         self.getElements()
+
         results = self.responseContent["results"]
         self.assertEqual(len(results), len(self.elementArgs))
+
+        self._checkPaginationLinks()
 
 
     def test_getElements_variable(self):
@@ -94,6 +107,7 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
         results = self.responseContent["results"]
         self.assertEqual(len(results), 0)
 
+        self._checkPaginationLinks()
         self.assertEqual(self.resource, oldResource)
 
         self.addElements()
@@ -101,6 +115,7 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
         results = self.responseContent["results"]
         self.assertEqual(len(results), len(self.elementArgs))
 
+        self._checkPaginationLinks()
         self.assertEqual(self.resource, oldResource)
 
 
