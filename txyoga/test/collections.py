@@ -89,6 +89,70 @@ class PartialExposureMixin(_BaseCollectionTest):
 
 
 
+class World(base.Collection):
+    """
+    A dystopic world, consisting of a small number of superstates.
+    """
+    exposedAttributes = "name",
+
+
+
+class State(base.Element):
+    """
+    A state.
+    """
+    exposedAttributes = "name",
+    children = "ministries",
+
+    def __init__(self, name, ministries):
+        super(State, self).__init__()
+        self.name = name
+        self.ministries = ministries
+
+
+
+class Ministries(base.Collection):
+    """
+    A collection of the important organisations within a state.
+    """
+    exposedElementAttributes = "name",
+
+
+
+class Ministry(base.Element):
+    """
+    A unit of operation of the state machinery.
+    """
+    exposedAttributes = "name",
+
+    def __init__(self, name):
+        super(Ministry, self).__init__()
+        self.name = name
+
+
+
+ministryNames = ["Miniluv", "Minipax", "Miniplenty", "Minitrue"]
+
+
+
+class ElementChildMixin(_BaseCollectionTest):
+    """
+    A collection test mixin that provides access to elements with children.
+    """
+    oceaniaMinistries = Ministries()
+
+    for ministryName in ministryNames:
+        ministry = Ministry(ministryName)
+        oceaniaMinistries.add(ministry)
+
+    collectionClass = World
+    elementClass = State
+    elementArgs = [("oceania", oceaniaMinistries),
+                   ("eurasia", Ministries()),
+                   ("eastasia", Ministries())]
+
+
+
 class SoftwareProject(base.Collection):
     """
     A software project that consists of a bunch of bikesheds.
