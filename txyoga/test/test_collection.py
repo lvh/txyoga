@@ -38,6 +38,22 @@ class CollectionTest(TestCase):
 
 
 
+class ElementChildTest(collections.ElementChildMixin, TestCase):
+    """
+    Test accessing children of elements.
+    """
+    def test_child(self):
+        """
+        Tests that a child can be accessed.
+        """
+        self.addElements()
+        self.getElementChild("oceania", "ministries")
+
+        results = self.responseContent["results"]
+        expectedResults = [{"name": name} for name in collections.ministryNames]
+        self.assertEqual(results, expectedResults)
+
+
 class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
     """
     A mixin that tests some generic invariants for collections small enough to
@@ -48,6 +64,7 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
         Tests that an empty collection reports no elements.
         """
         self.getElements()
+
         results = self.responseContent["results"]
         self.assertEqual(len(results), 0)
 
