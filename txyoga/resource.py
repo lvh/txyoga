@@ -124,11 +124,8 @@ class CollectionResource(EncodingResource):
 
 
     def _deleteChild(self, identifier, request):
-        try:
-            self._collection.removeByIdentifier(identifier)
-            return Deleted()
-        except KeyError:
-            return self._missingChild(identifier, request)
+       self._collection.removeByIdentifier(identifier)
+       return Deleted()
 
 
     def _missingChild(self, element, request):
