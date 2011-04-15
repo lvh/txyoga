@@ -122,25 +122,40 @@ class _BaseCollectionTest(object):
         self.assertIn("errorDetails", self.responseContent)
 
 
+    def _getResource(self, args=None, headers=None, path=()):
+        """
+        Generalized GET for a particular resource.
+        """
+        request = _FakeRequest(args=args, requestHeaders=headers)
+
+        resource = self.resource
+        for childName in path:
+            resource = resource.getChildWithDefault(childName, request)
+
+        self._makeRequest(resource, request)
+        self._checkContentType()
+        self._decodeResponse()
+
+
     def getElements(self, args=None, headers=None):
         """
         Gets a bunch of elements from a collection.
         """
-        request = _FakeRequest(args=args, requestHeaders=headers)
-        self._makeRequest(self.resource, request)
-        self._checkContentType()
-        self._decodeResponse()
+        self._getResource(args, headers)
 
 
-    def getElement(self, name, args=None, headers=None):
+    def getElement(self, element, args=None, headers=None):
         """
         Gets a particular element from a collection.
         """
-        request = _FakeRequest(args=args, requestHeaders=headers)
-        elementResource = self.resource.getChild(name, request)
-        self._makeRequest(elementResource, request)
-        self._checkContentType()
-        self._decodeResponse()
+        self._getResource(args, headers, [element])
+
+
+    def getElementChild(self, element, child, args=None, headers=None):
+        """
+        Gets a child of a particular element from a collection.
+        """
+        self._getResource(args, headers, [element, child])
 
 
     def updateElement(self, name, body, headers=None):
