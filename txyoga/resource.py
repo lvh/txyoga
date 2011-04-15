@@ -170,31 +170,8 @@ class CollectionResource(EncodingResource):
         """
         Gets the start and stop bounds out of the query.
         """
-        try:
-            start, = request.args["start"]
-        except KeyError:
-            start = 0
-        except ValueError:
-            raise errors.PaginationError("More than one start in query")
-
-        try:
-            stop, = request.args["stop"]
-        except KeyError:
-            stop = self._collection.pageSize
-        except ValueError:
-            raise errors.PaginationError("More than one stop in query")
-
-        try:
-            start = int(start)
-        except ValueError:
-            raise errors.PaginationError("Start not an integer")
-
-        try:
-            stop = int(stop)
-        except ValueError:
-            raise errors.PaginationError("Stop not an integer")
-
-
+        start = _getBound(request.args, "start")
+        stop = _getBound(request.args, "stop", self._collection.pageSize)
         return start, stop
 
 
@@ -224,6 +201,23 @@ class CollectionResource(EncodingResource):
         nextURL = buildURL(stop, stop + pageSize)
 
         return prevURL, nextURL
+
+
+
+def _getBound(args, key, default=0):
+    """
+    Gets a particular start or stop bound from the given args.
+    """
+    try:
+        values = args[key]
+        if len(values) != 1:
+            raise errors.PaginationError("duplicate key %s in query" % (key,))
+
+        return int(values[0])
+    except KeyError:
+        return default
+    except ValueError:
+        raise errors.PaginationError("key %s not an integer" % (key,))
 
 
 
