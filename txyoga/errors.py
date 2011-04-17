@@ -91,7 +91,6 @@ class ForbiddenAttributeUpdateError(SerializableError):
     """
     responseCode = http.FORBIDDEN
 
-
     def __init__(self, requestedAttributes, updatableAttributes):
         message = "attribute update not allowed, update aborted"
         details = {"updatableAttributes": updatableAttributes,
