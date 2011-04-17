@@ -25,29 +25,29 @@ class SerializableError(Exception):
 
 class UnsupportedContentTypeError(SerializableError):
     """
-    Raised when the provided media type is unsupported.
+    Raised when the provided content type is unsupported.
 
     This happens on POST or PUT.
     """
     responseCode = http.UNSUPPORTED_MEDIA_TYPE
 
-    def __init__(self, supportedMimeTypes, providedMimeType):
-        message = "no acceptable decoder available for given MIME type"
-        details = {"supportedMimeTypes": supportedMimeTypes,
-                   "providedMimeType": providedMimeType}
+    def __init__(self, supportedContentTypes, providedContentType):
+        message = "no acceptable decoder available for given content type"
+        details = {"supportedContentTypes": supportedContentTypes,
+                   "providedContentType": providedContentType}
         SerializableError.__init__(self, message, details)
 
 
 
 class MissingContentType(SerializableError):
     """
-    Raised when the client forgot to specify the content type.
+    Raised when the client failed to specify the content type.
     """
     responseCode = http.UNSUPPORTED_MEDIA_TYPE
 
-    def __init__(self, supportedMimeTypes):
+    def __init__(self, supportedContentTypes):
         message = "request didn't specify a content type"
-        details = {"supportedMimeTypes": supportedMimeTypes}
+        details = {"supportedContentTypes": supportedContentTypes}
         SerializableError.__init__(self, message, details)
 
 
@@ -61,10 +61,10 @@ class UnacceptableRequestError(SerializableError):
     """
     responseCode = http.NOT_ACCEPTABLE
 
-    def __init__(self, supportedMimeTypes, acceptedMimeTypes):
+    def __init__(self, supportedContentTypes, supportedContentTypes):
         message = "no acceptable encoder available"
-        details = {"supportedMimeTypes": supportedMimeTypes,
-                   "acceptedMimeTypes": acceptedMimeTypes}
+        details = {"supportedContentTypes": supportedContentTypes,
+                   "supportedContentTypes": supportedContentTypes}
         SerializableError.__init__(self, message, details)
 
 
@@ -78,13 +78,17 @@ class PaginationError(SerializableError):
 
 class MissingResourceError(SerializableError):
     """
-    Describes a missing resource.
+    Raised when attempting to access a resource that does not exist.
     """
     responseCode = http.NOT_FOUND
 
 
 
 class ForbiddenAttributeUpdateError(SerializableError):
+    """
+    Raised when attempting to update an attribute which is not allowed
+    to be updated.
+    """
     responseCode = http.FORBIDDEN
 
 

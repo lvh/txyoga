@@ -69,18 +69,18 @@ class EncodingResource(Resource):
     """
     encoders = {"application/json": jsonEncode}
     decoders = {"application/json": json.loads}
-    defaultMimeType = "application/json"
+    defaultContentType = "application/json"
 
 
     def _getEncoder(self, request):
-        accept = request.getHeader("Accept") or self.defaultMimeType
-        accepted = [mimeType.lower() for mimeType, _ in _parseAccept(accept)]
+        accept = request.getHeader("Accept") or self.defaultContentType
+        accepted = [contentType.lower() for contentType, _ in _parseAccept(accept)]
 
-        for mimeType in accepted:
+        for contentType in accepted:
             try:
-                encoder = self.encoders[mimeType]
-                request.setHeader("Content-Type", mimeType)
-                return encoder, mimeType
+                encoder = self.encoders[contentType]
+                request.setHeader("Content-Type", contentType)
+                return encoder, contentType
             except KeyError:
                 continue
 
@@ -134,18 +134,18 @@ class CollectionResource(EncodingResource):
         try:
             encoder, contentType = self._getEncoder(request)
         except errors.UnacceptableRequestError:
-            contentType = self.defaultMimeType
+            contentType = self.defaultContentType
             encoder = self.encoders[contentType]
 
         return RESTErrorPage(e, encoder, contentType)
 
 
     def render_GET(self, request):
-        mimeType = self.defaultMimeType
-        encoder = self.encoders[mimeType]
+        contentType = self.defaultContentType
+        encoder = self.encoders[contentType]
 
         try:
-            encoder, mimeType = self._getEncoder(request)
+            encoder, contentType = self._getEncoder(request)
 
             start, stop = self._getBounds(request)
             url = request.prePathURL()
@@ -155,7 +155,7 @@ class CollectionResource(EncodingResource):
             attrs = self._collection.exposedElementAttributes
             results = [element.toState(attrs) for element in elements]
         except errors.SerializableError, e:
-            errorResource = RESTErrorPage(e, encoder, mimeType)
+            errorResource = RESTErrorPage(e, encoder, contentType)
             return errorResource.render(request)
 
         if (stop - start) > len(elements):
@@ -238,8 +238,8 @@ class ElementResource(EncodingResource):
 
 
     def render_GET(self, request):
-        contentType = self.defaultMimeType
-        encoder = self.encoders[self.defaultMimeType]
+        contentType = self.defaultContentType
+        encoder = self.encoders[self.defaultContentType]
 
         try:
             encoder, contentType = self._getEncoder(request)
@@ -257,7 +257,7 @@ class ElementResource(EncodingResource):
             self._element.update(state)
             return ""
         except errors.SerializableError, e:
-            contentType = self.defaultMimeType
+            contentType = self.defaultContentType
             encoder = self.encoders[contentType]
             errorResource = RESTErrorPage(e, encoder, contentType)
             return errorResource.render(request)
@@ -274,9 +274,9 @@ def _parseAccept(header):
             continue # Begone, vile hellspawn!
 
         elements = part.split(";")
-        mimeType, rawParams = elements[0].strip(), elements[1:]
+        contentType, rawParams = elements[0].strip(), elements[1:]
         params = dict(map(str.strip, p.split("=")) for p in rawParams)
 
-        accepted.append((mimeType, params))
+        accepted.append((contentType, params))
 
     return accepted
