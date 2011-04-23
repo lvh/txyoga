@@ -61,10 +61,10 @@ class UnacceptableRequestError(SerializableError):
     """
     responseCode = http.NOT_ACCEPTABLE
 
-    def __init__(self, supportedContentTypes, supportedContentTypes):
+    def __init__(self, supportedContentTypes, acceptedContentTypes):
         message = "no acceptable encoder available"
         details = {"supportedContentTypes": supportedContentTypes,
-                   "supportedContentTypes": supportedContentTypes}
+                   "acceptedContentTypes": acceptedContentTypes}
         SerializableError.__init__(self, message, details)
 
 
