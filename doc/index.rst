@@ -6,6 +6,11 @@
 Welcome to txYoga's documentation!
 ==================================
 
+This is the documentation for txYoga, a REST_ toolkit for Twisted_.
+
+.. _REST: https://secure.wikimedia.org/wikipedia/en/wiki/Representational_State_Transfer
+.. _Twisted: http://www.twistedmatrix.com/
+
 Contents:
 
 .. toctree::
