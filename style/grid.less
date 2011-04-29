@@ -1,0 +1,49 @@
+@columnWidth: 40px;
+@gutterWidth: 10px;
+@totalColumns: 9;
+
+.rowWidth (@columns) {
+  width: @columnWidth * @columns + (@gutterWidth * @columns) * 2;
+}
+
+.row (@columns: @totalColumns) {
+  .rowWidth(@columns);
+  margin: 0 auto;
+  overflow: hidden;
+
+  .row {
+    width: auto;
+    margin: 0 (-1 * @gutterWidth);
+    display: inline-block;
+  }
+}
+
+.column {
+  margin: 0 @gutterWidth;
+  overflow: hidden;
+  float: left;
+  display: inline;
+}
+
+.gridWidth (@columns) {
+  /* For things like tr where .column rules would break everything */
+  width: (@columnWidth * @columns) + (@gutterWidth * 2*(@columns - 1));
+}
+
+.grid (@columns) {
+  .gridWidth(@columns);
+  .column;
+}
+ 
+.grid1 { .grid(1); }
+.grid2 { .grid(2); }
+.grid3 { .grid(3); }
+.grid4 { .grid(4); }
+.grid5 { .grid(5); }
+.grid6 { .grid(6); }
+.grid7 { .grid(7); }
+.grid8 { .grid(8); }
+.grid9 { .grid(9); }
+.grid10 { .grid(10); }
+.grid11 { .grid(11); }
+.grid12 { .grid(12); }

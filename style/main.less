@@ -1,0 +1,37 @@
+@import "grid";
+@import "util";
+
+body {
+    font-family: "PT Serif";
+    font-size: 20px;
+}
+
+header, section, footer {
+    .row;
+}
+
+a, a:visited {
+    color: red;
+}
+
+ol {
+   padding-left: 65px;
+}
+
+section#laws > ol {
+   list-style-type: upper-roman;
+}
+
+p, li {
+    text-align: justify;
+    line-height: 140%;
+}
+
+ul.images {
+    .row;
+    padding: 10px 0;
+
+    li {
+        .grid(3);
+    }
+}
