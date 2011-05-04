@@ -3,7 +3,6 @@
 Utilties for making HTTP requests to txYoga tutorial examples.
 """
 import functools
-import json
 import httplib
 import urllib
 
