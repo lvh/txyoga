@@ -68,4 +68,4 @@ List of examples
 
 .. toctree::
 
-   intro
+   accessing
