@@ -12,11 +12,15 @@ fi
 
 case "$1" in
 
-start) 	twistd web --path=doc/tutorial &&\
+start) 	twistd web --path=tutorial &&\
 	echo "Tutorial server started at port 8080..."
 	;;
-stop)	kill `cat twistd.pid` && rm twistd.log &&\
-        echo "Tutorial server stopped..."
+stop)	if [ -f twistd.pid ]
+	then
+	    kill `cat twistd.pid` && rm twistd.log &&\
+            echo "Tutorial server stopped..."
+	else
+	    echo "Couldn't find pidfile, aborting..."
+	fi
 	;;
-
 esac

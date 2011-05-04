@@ -125,8 +125,9 @@ linkcheck:
 	      "or in $(BUILDDIR)/linkcheck/output.txt."
 
 doctest:
-	PYTHONPATH=../:$PYTHONPATH ./serveTutorial start
-	$(SPHINXBUILD) -b doctest $(ALLSPHINXOPTS) $(BUILDDIR)/doctest
+	./serveTutorial stop
+	PYTHONPATH=../:$$PYTHONPATH ./serveTutorial start
+	PYTHONPATH=.:$$PYTHONPATH $(SPHINXBUILD) -b doctest $(ALLSPHINXOPTS) $(BUILDDIR)/doctest
 	./serveTutorial stop
 	@echo "Testing of doctests in the sources finished, look at the " \
 	      "results in $(BUILDDIR)/doctest/output.txt."
