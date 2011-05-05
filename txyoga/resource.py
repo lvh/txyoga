@@ -9,7 +9,7 @@ from urlparse import urlsplit, urlunsplit
 from twisted.web.resource import IResource, Resource
 from twisted.web import http
 
-from txyoga import errors
+from txyoga import errors, interface
 from txyoga.serializers import json
 
 
@@ -42,7 +42,7 @@ class RESTResourceJSONEncoder(json.JSONEncoder):
     L{SerializableError}s.
     """
     def default(self, obj):
-        if isinstance(obj, errors.SerializableError):
+        if interface.ISerializableError.providedBy(obj):
             return {"errorMessage": obj.message, "errorDetails": obj.details}
         return json.JSONEncoder.default(self, obj)
 
