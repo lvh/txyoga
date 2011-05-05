@@ -9,7 +9,7 @@ are just cliché).
 Example code
 ============
 
-.. literalinclude:: accessing.rpy
+.. literalinclude:: company.rpy
    :language: python
 
 First, the code defines a collection class called
@@ -76,6 +76,9 @@ available in ``doc/tutorial/util.py``.
    :language: python
 
 
+Although it has other methods, we'll only be using ``get`` in this
+example.
+
 The ``buildPath`` function creates a URL path, roughly as you'd
 expect:
 
@@ -86,11 +89,12 @@ expect:
    >>> buildPath("test.rpy", "lvh", "minions")
    '/test.rpy/lvh/minions'
 
-Create an Example object for this tutorial example (``accessing``):
+Create an Example object for this tutorial example (``"company"``,
+since that's the example code being used):
 
 .. doctest::
 
-   >>> x = Example("accessing")
+   >>> x = Example("company")
 
 Accessing the collection
 ------------------------
