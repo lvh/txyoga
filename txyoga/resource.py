@@ -113,22 +113,65 @@ class CollectionResource(EncodingResource):
 
 
     def getChild(self, path, request):
+        """
+        Gets the resource for an element in the collection for this resource.
+
+        If this is a DELETE request addressing an element this collection,
+        deletes the child.  If it is a PUT request addressing an element in
+        this collection which does not exist yet, creates an element
+        accessible at the request path.  Otherwise, attempts to return the
+        resource for the appropriate addressed child, by accessing that child
+        and attempting to adapt it to ``IResource``.
+
+        If that child could not be found, (unless it is being created, of
+        course), returns an error page signaling the missing element.
+
+        The case for updating an element is not covered in this method: since
+        updating is an operation on elements that already exist, that is
+        handled by the corresponding ElementResource.
+        """
         try:
             if request.method == "DELETE" and not request.postpath:
-                # Request wants to delete a child of this collection
-                return self._deleteChild(path, request)
+                return self._deleteElement(path)
 
             return IResource(self._collection[path])
         except KeyError:
-            return self._missingChild(path, request)
+            if request.method == "PUT" and not request.postpath:
+                return self._createElement(path, request)
+
+            return self._missingElement(path, request)
 
 
-    def _deleteChild(self, identifier, request):
-       self._collection.removeByIdentifier(identifier)
-       return Deleted()
+    def _deleteElement(self, identifier):
+        """
+        Attempts to delete an element.
+        """
+        self._collection.removeByIdentifier(identifier)
+        return Deleted()
 
 
-    def _missingChild(self, element, request):
+    def _createElement(self, identifier, request):
+        """
+        Attempts to create an element.
+        """
+        try:
+            decoder, contentType = self._getDecoder(request)
+            state = decoder(request.body)
+            element = self._collection.createElementFromState(state)
+            self._collection.add(element)
+            return ""
+        except errors.SerializableError, e:
+            contentType = self.defaultContentType
+            encoder = self.encoders[contentType]
+            errorResource = RESTErrorPage(e, encoder, contentType)
+            return errorResource.render(request)
+
+
+
+    def _missingElement(self, element, request):
+        """
+        Reports client about a missing element.
+        """
         e = errors.MissingResourceError("no such element %s" % (element,))
 
         try:
@@ -141,6 +184,9 @@ class CollectionResource(EncodingResource):
 
 
     def render_GET(self, request):
+        """
+        Renders the collection.
+        """
         contentType = self.defaultContentType
         encoder = self.encoders[contentType]
 

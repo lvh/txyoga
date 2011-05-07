@@ -4,25 +4,27 @@ from twisted.web.resource import IResource
 from txyoga import Collection, Element
 
 
-class Company(Collection):
-    """
-    A company.
-    """
-    exposedElementAttributes = "name",
-    updatableAttributes = "salary", "title"
-
-
-
 class Employee(Element):
     """
     An employee at a company.
     """
     exposedAttributes = "name", "title"
+    updatableAttributes = "salary", "title"
+    
 
     def __init__(self, name, title, salary):
         self.name = name
         self.title = title
         self.salary = salary
+
+
+
+class Company(Collection):
+    """
+    A company.
+    """
+    elementClass = Employee
+    exposedElementAttributes = "name",
 
 
 
