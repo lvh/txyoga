@@ -3,8 +3,8 @@
 """
 Test updating elements in collections.
 """
-from twisted.web import http, http_headers
 from twisted.trial.unittest import TestCase
+from twisted.web import http, http_headers
 
 from txyoga.serializers import json
 from txyoga.test import collections
@@ -25,7 +25,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         self.body = self.uselessUpdateBody
 
 
-    def _test_updateElement(self, expectedStatusCode=None):
+    def _test_updateElement(self, expectedStatusCode=http.OK):
         """
         Tries to change the color of a bikeshed.
         """
@@ -36,18 +36,20 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         encodedBody = json.dumps(self.body)
         self.updateElement(name, encodedBody, self.headers)
 
-        expectFailure = expectedStatusCode is not None
-        if expectFailure:
+        if expectedStatusCode is http.OK:
+            # A successful PUT does not have a response body
+            self.assertEqual(self.request.code, expectedStatusCode)
+            self._checkContentType(None)
+            expectedContent["color"] = self.body["color"]
+        else:
             # A failed PUT has a response body
             self._checkContentType("application/json")
             self._decodeResponse()
             self._checkBadRequest(expectedStatusCode)
-        else:
-            # A successful PUT does not have a response body
-            self._checkContentType(None)
-            expectedContent["color"] = self.body["color"]
 
         self.getElement(name)
+        self.assertEqual(self.request.code, http.OK)
+        self._checkContentType("application/json")
         self.assertEqual(self.responseContent, expectedContent)
 
 
@@ -62,15 +64,15 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
     def test_updateElement_missingContentType(self):
         """
         Test that trying to update an element when not specifying the content
-        type of the update content fails.
+        type fails.
         """
         self._test_updateElement(http.UNSUPPORTED_MEDIA_TYPE)
 
 
     def test_updateElement_badContentType(self):
         """
-        Test that trying to update an element when specifying a bogus content
-        type of the update content fails.
+        Test that trying to update an element when specifying a bad content
+        type fails.
         """
         self.headers.setRawHeaders("Content-Type", ["ZALGO/ZALGO"])
         self._test_updateElement(http.UNSUPPORTED_MEDIA_TYPE)

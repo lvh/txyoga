@@ -3,7 +3,7 @@ Generic utilities for testing txYoga.
 """
 from functools import partial
 
-from twisted.web import http_headers
+from twisted.web import http, http_headers
 from twisted.web.resource import IResource
 
 from txyoga.serializers import json
@@ -25,10 +25,11 @@ class _FakeRequest(object):
             self.body = body
 
         self.prePathURL = lambda: prePathURL
-
         # we're always directly aimed at a resource and nobody is doing any
         # postpath-related stuff, so let's just pretend it's always emtpy...
         self.postpath = []
+
+        self.code = http.OK
 
         if requestHeaders is not None:
             self.requestHeaders = requestHeaders
@@ -176,3 +177,10 @@ class _BaseCollectionTest(object):
         request = _FakeDELETERequest()
         elementResource = self.resource.getChild(name, request)
         self._makeRequest(elementResource, request)
+
+
+    def createElement(self, name, body, headers=None, method="PUT"):
+        if method == "PUT":
+            self.updateElement(name, body, headers)
+        elif method == "POST":
+            pass

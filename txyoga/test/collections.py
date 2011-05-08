@@ -8,19 +8,20 @@ from txyoga.test.util import _BaseCollectionTest
 
 
 
-class Jar(base.Collection):
-    """
-    A cookie jar.
-    """
-
-
-
 class Cookie(base.Element):
     """
     A cookie, typically contained in a jar.
     """
     def __init__(self, name):
         self.name = name
+
+
+
+class Jar(base.Collection):
+    """
+    A cookie jar.
+    """
+    defaultElementClass = Cookie
 
 
 
@@ -187,3 +188,16 @@ class UpdatableCollectionMixin(_BaseCollectionTest):
                    ("east", "blue"),
                    ("south", "green"),
                    ("west", "yellow")]
+
+
+
+class ElementCreationMixin(_BaseCollectionTest):
+    """
+    A mixin for tests that try to create new elements in a collection.
+    """
+    collectionClass = Jar
+    elementClass = Cookie
+    elementArgs = []
+
+    newElementName = "shortbread"
+    newElementState = {"name": newElementName}
