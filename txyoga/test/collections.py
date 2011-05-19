@@ -21,7 +21,6 @@ class Jar(base.Collection):
     """
     A cookie jar.
     """
-    defaultElementClass = Cookie
 
 
 
@@ -191,12 +190,28 @@ class UpdatableCollectionMixin(_BaseCollectionTest):
 
 
 
+class TaggedCookie(Cookie):
+    """
+    A cookie that exposes its name.
+    """
+    exposedAttributes = "name",
+
+
+
+class Replicator(Jar):
+    """
+    A futuristic cookie jar that produces new cookies.
+    """
+    defaultElementClass = TaggedCookie
+
+
+
 class ElementCreationMixin(_BaseCollectionTest):
     """
     A mixin for tests that try to create new elements in a collection.
     """
-    collectionClass = Jar
-    elementClass = Cookie
+    collectionClass = Replicator
+    elementClass = TaggedCookie
     elementArgs = []
 
     newElementName = "shortbread"

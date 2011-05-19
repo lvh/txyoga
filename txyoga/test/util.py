@@ -55,8 +55,9 @@ class _FakeRequest(object):
 
 
 
-_FakePUTRequest = partial(_FakeRequest, method="PUT")
 _FakeDELETERequest = partial(_FakeRequest, method="DELETE")
+_FakePOSTRequest = partial(_FakeRequest, method="POST")
+_FakePUTRequest = partial(_FakeRequest, method="PUT")
 
 
 
@@ -85,7 +86,7 @@ class _BaseCollectionTest(object):
 
     def _makeRequest(self, resource, request):
         """
-        Gets the response to a request.
+        Makes a request to a particular resource.
         """
         self.request = request
         self.response = resource.render(request)
@@ -180,7 +181,12 @@ class _BaseCollectionTest(object):
 
 
     def createElement(self, name, body, headers=None, method="PUT"):
+        """
+        Create a new element.
+        """
+        #import pdb; pdb.set_trace()
         if method == "PUT":
             self.updateElement(name, body, headers)
         elif method == "POST":
-            pass
+            request = _FakePOSTRequest(body=body, requestHeaders=headers)
+            self._makeRequest(self.resource, request)

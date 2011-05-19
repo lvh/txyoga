@@ -53,6 +53,16 @@ def jsonEncode(obj):
 
 
 
+class Created(Resource):
+    """
+    A resource returned when an element has been successfully created.
+    """
+    def render(self, request):
+        request.setResponseCode(http.CREATED)
+        return ""
+
+
+
 class Deleted(Resource):
     """
     A resource returned when an element has been successfully deleted.
@@ -159,12 +169,12 @@ class CollectionResource(EncodingResource):
             state = decoder(request.body)
             element = self._collection.createElementFromState(state)
             self._collection.add(element)
-            return ""
+            return Created()
         except errors.SerializableError, e:
             contentType = self.defaultContentType
             encoder = self.encoders[contentType]
             errorResource = RESTErrorPage(e, encoder, contentType)
-            return errorResource.render(request)
+            return errorResource
 
 
 
