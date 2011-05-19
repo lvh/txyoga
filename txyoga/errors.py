@@ -96,3 +96,18 @@ class ForbiddenAttributeUpdateError(SerializableError):
         details = {"updatableAttributes": updatableAttributes,
                    "requestedAttributes": requestedAttributes}
         SerializableError.__init__(self, message, details)
+
+
+
+class IdentifierError(SerializableError):
+    """
+    Raised when attempting to put an element somewhere that does not
+    match its identification.
+    """
+    responseCode = http.FORBIDDEN
+
+    def __init__(self, expected, actual):
+        message = "new element did not have specified identifying attribute"
+        details = {"actualIdentifyingAttribute": repr(actual),
+                   "expectedIdentifyingAttribute": repr(expected)}
+        SerializableError.__init__(self, message, details)

@@ -167,7 +167,13 @@ class CollectionResource(EncodingResource):
         try:
             decoder, contentType = self._getDecoder(request)
             state = decoder(request.body)
+
             element = self._collection.createElementFromState(state)
+
+            actualIdentifier = getattr(element, element.identifyingAttribute)
+            if actualIdentifier != identifier:
+                raise errors.IdentifierError(identifier, actualIdentifier)
+
             self._collection.add(element)
             return Created()
         except errors.SerializableError, e:
