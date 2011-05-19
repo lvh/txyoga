@@ -337,7 +337,11 @@ def _parseAccept(header):
 
         elements = part.split(";")
         contentType, rawParams = elements[0].strip(), elements[1:]
-        params = dict(map(str.strip, p.split("=")) for p in rawParams)
+
+        params = {}
+        for param in rawParams:
+            key, value = map(str.strip, param.split("=", 1))
+            params[key] = value
 
         accepted.append((contentType, params))
 
