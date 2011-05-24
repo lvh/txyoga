@@ -94,15 +94,15 @@ since that's the example code being used):
 
 .. doctest::
 
-   >>> x = Example("company")
+   >>> example = Example("company")
 
 Accessing the collection
 ------------------------
 
 .. doctest::
 
-   >>> res = x.get()
-   >>> json.load(res)
+   >>> response = example.get()
+   >>> json.load(response)
    {u'prev': None, u'results': [{u'name': u'lvh'}, {u'name': u'asook'}], u'next': None}
 
 The important key here is ``results``. As you can see, has two
@@ -121,7 +121,7 @@ behind the scenes.
 
 .. doctest::
 
-   >>> headers = res.getheaders()
+   >>> headers = response.getheaders()
    >>> headerKeys = [k for k, v in headers]
    >>> expectedKeys = ["date", "content-type", "content-length", "server"]
    >>> assert all(k in headerKeys for k in expectedKeys)
@@ -149,8 +149,8 @@ Let's look at this ``lvh`` employee from up close next.
 
 .. doctest::
 
-   >>> res = x.get("lvh")
-   >>> json.load(res)
+   >>> response = example.get("lvh")
+   >>> json.load(response)
    {u'name': u'lvh', u'title': u'CEO'}
 
 As expected, you get a dictionary back with the ``name`` and ``title``
@@ -167,7 +167,7 @@ As before, txYoga will serve the content type correctly:
 
 .. doctest::
 
-   >>> next(v for k, v in res.getheaders() if k == "content-type")
+   >>> next(v for k, v in response.getheaders() if k == "content-type")
    'application/json'
 
 Review
