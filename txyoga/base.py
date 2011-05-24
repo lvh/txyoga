@@ -43,6 +43,7 @@ class Element(object):
         """
         Constructs a new object from this state.
         """
+        state = dict((str(k), v) for (k, v) in state.items())
         return cls(**state)
 
 

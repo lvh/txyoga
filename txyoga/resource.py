@@ -78,7 +78,7 @@ class EncodingResource(Resource):
     A resource that understands content types.
     """
     encoders = {"application/json": jsonEncode}
-    decoders = {"application/json": json.loads}
+    decoders = {"application/json": json.load}
     defaultContentType = "application/json"
 
 
@@ -166,7 +166,7 @@ class CollectionResource(EncodingResource):
         """
         try:
             decoder, contentType = self._getDecoder(request)
-            state = decoder(request.body)
+            state = decoder(request.content)
 
             element = self._collection.createElementFromState(state)
 
@@ -315,7 +315,7 @@ class ElementResource(EncodingResource):
     def render_PUT(self, request):
         try:
             decoder, contentType = self._getDecoder(request)
-            state = decoder(request.body)
+            state = decoder(request.content)
             self._element.update(state)
             return ""
         except errors.SerializableError, e:
