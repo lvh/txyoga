@@ -2,6 +2,7 @@
 Generic utilities for testing txYoga.
 """
 from functools import partial
+from StringIO import StringIO
 
 from twisted.web import http, http_headers
 from twisted.web.resource import IResource
@@ -22,7 +23,9 @@ class _FakeRequest(object):
         self.args = args if args is not None else {}
 
         if body is not None:
-            self.body = body
+            self.content = StringIO(body)
+        else:
+            self.content = StringIO('')
 
         self.prePathURL = lambda: prePathURL
         # we're always directly aimed at a resource and nobody is doing any
