@@ -71,7 +71,7 @@ Updating an element
 -------------------
 
 Now that the company's grown, lvh really deserves a title bump and a
-raise. In REST
+raise. In REST, updates are typically done using a PUT request.
 
 Deleting an element
 -------------------
