@@ -168,6 +168,8 @@ class CollectionResource(EncodingResource):
         try:
             decoder, contentType = self._getDecoder(request)
             state = decoder(request.content)
+            if identifier is None:
+                identifier = state['name']
 
             element = self._collection.createElementFromState(state)
 
@@ -228,19 +230,10 @@ class CollectionResource(EncodingResource):
         response = {"results": results, "prev": prevURL, "next": nextURL}
         return encoder(response)
 
+
     def render_POST(self, request):
         # TODO This is shitty ... sorry
-        try:
-            decoder, contentType = self._getDecoder(request)
-            state = decoder(request.content)
-            identifier = state['name']
-            self._createElement(identifier, request)
-            return ""
-        except errors.SerializableError, e:
-            contentType = self.defaultContentType
-            encoder = self.encoders[contentType]
-            errorResource = RESTErrorPage(e, encoder, contentType)
-            return errorResource.render(request)
+        return self._createElement(None, request)
 
 
     def _getBounds(self, request):
