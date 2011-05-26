@@ -146,7 +146,8 @@ class CollectionResource(EncodingResource):
 
             return IResource(self._collection[path])
         except KeyError:
-            if request.method == "PUT" and not request.postpath:
+            # todo: i'm pretty certain we should only allow POST here
+            if request.method in ("PUT", "POST") and not request.postpath:
                 return self._createElement(path, request)
 
             return self._missingElement(path, request)
@@ -323,6 +324,8 @@ class ElementResource(EncodingResource):
             encoder = self.encoders[contentType]
             errorResource = RESTErrorPage(e, encoder, contentType)
             return errorResource.render(request)
+
+    render_POST = render_PUT
 
 
 
