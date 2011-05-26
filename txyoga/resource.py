@@ -147,7 +147,7 @@ class CollectionResource(EncodingResource):
             return IResource(self._collection[path])
         except KeyError:
             # todo: i'm pretty certain we should only allow POST here
-            if request.method in ("PUT", "POST") and not request.postpath:
+            if request.method == 'PUT' and not request.postpath:
                 return self._createElement(path, request)
 
             return self._missingElement(path, request)
@@ -227,6 +227,20 @@ class CollectionResource(EncodingResource):
 
         response = {"results": results, "prev": prevURL, "next": nextURL}
         return encoder(response)
+
+    def render_POST(self, request):
+        # TODO This is shitty ... sorry
+        try:
+            decoder, contentType = self._getDecoder(request)
+            state = decoder(request.content)
+            identifier = state['name']
+            self._createElement(identifier, request)
+            return ""
+        except errors.SerializableError, e:
+            contentType = self.defaultContentType
+            encoder = self.encoders[contentType]
+            errorResource = RESTErrorPage(e, encoder, contentType)
+            return errorResource.render(request)
 
 
     def _getBounds(self, request):
@@ -325,7 +339,6 @@ class ElementResource(EncodingResource):
             errorResource = RESTErrorPage(e, encoder, contentType)
             return errorResource.render(request)
 
-    render_POST = render_PUT
 
 
 
