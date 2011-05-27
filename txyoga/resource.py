@@ -161,7 +161,7 @@ class CollectionResource(EncodingResource):
         return Deleted()
 
 
-    def _createElement(self, identifier, request):
+    def _createElement(self, identifier, request, isLeaf=False):
         """
         Attempts to create an element.
         """
@@ -178,11 +178,16 @@ class CollectionResource(EncodingResource):
                 raise errors.IdentifierError(identifier, actualIdentifier)
 
             self._collection.add(element)
-            return Created()
+            resource = Created()
+            if isLeaf:
+                return resource.render(request)
+            return resource
         except errors.SerializableError, e:
             contentType = self.defaultContentType
             encoder = self.encoders[contentType]
             errorResource = RESTErrorPage(e, encoder, contentType)
+            if isLeaf:
+                return errorResource.render(request)
             return errorResource
 
 
@@ -233,7 +238,7 @@ class CollectionResource(EncodingResource):
 
     def render_POST(self, request):
         # TODO This is shitty ... sorry
-        return self._createElement(None, request)
+        return self._createElement(None, request, True)
 
 
     def _getBounds(self, request):
