@@ -188,8 +188,6 @@ class CollectionResource(EncodingResource):
             contentType = self.defaultContentType
             encoder = self.encoders[contentType]
             errorResource = RESTErrorPage(e, encoder, contentType)
-            if isLeaf:
-                return errorResource.render(request)
             return errorResource
 
 
