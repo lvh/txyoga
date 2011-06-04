@@ -148,7 +148,7 @@ class CollectionResource(EncodingResource):
         except KeyError:
             # todo: i'm pretty certain we should only allow POST here
             if request.method == 'PUT' and not request.postpath:
-                return self._createElement(path, request)
+                return self._createElement(request, identifier=path)
 
             return self._missingElement(path, request)
 
@@ -161,27 +161,29 @@ class CollectionResource(EncodingResource):
         return Deleted()
 
 
-    def _createElement(self, identifier, request, isLeaf=False):
+    def _createElement(self, request, identifier=None):
         """
         Attempts to create an element.
+
+        If the request inherently specifies the identifier for the
+        element being put (for example, with a PUT request), it is
+        specified using the identifier keyword argument. If that
+        identifier does not match the identifier of the new element,
+        `IdentifierError` is raised.
         """
         try:
             decoder, contentType = self._getDecoder(request)
             state = decoder(request.content)
-            if identifier is None:
-                identifier = state['name']
 
             element = self._collection.createElementFromState(state)
 
-            actualIdentifier = getattr(element, element.identifyingAttribute)
-            if actualIdentifier != identifier:
-                raise errors.IdentifierError(identifier, actualIdentifier)
+            if identifier is not None:
+                actualIdentifier = getattr(element, element.identifyingAttribute)
+                if actualIdentifier != identifier:
+                    raise errors.IdentifierError(identifier, actualIdentifier)
 
             self._collection.add(element)
-            resource = Created()
-            if isLeaf:
-                return resource.render(request)
-            return resource
+            return Created()
         except errors.SerializableError, e:
             contentType = self.defaultContentType
             encoder = self.encoders[contentType]
@@ -237,8 +239,8 @@ class CollectionResource(EncodingResource):
 
 
     def render_POST(self, request):
-        # TODO This is shitty ... sorry
-        return self._createElement(None, request, True)
+        resource = self._createElement(request)
+        return resource.render(request)
 
 
     def _getBounds(self, request):
