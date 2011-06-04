@@ -146,7 +146,8 @@ class CollectionResource(EncodingResource):
 
             return IResource(self._collection[path])
         except KeyError:
-            if request.method == "PUT" and not request.postpath:
+            # todo: i'm pretty certain we should only allow POST here
+            if request.method == 'PUT' and not request.postpath:
                 return self._createElement(path, request)
 
             return self._missingElement(path, request)
@@ -160,13 +161,15 @@ class CollectionResource(EncodingResource):
         return Deleted()
 
 
-    def _createElement(self, identifier, request):
+    def _createElement(self, identifier, request, isLeaf=False):
         """
         Attempts to create an element.
         """
         try:
             decoder, contentType = self._getDecoder(request)
             state = decoder(request.content)
+            if identifier is None:
+                identifier = state['name']
 
             element = self._collection.createElementFromState(state)
 
@@ -175,11 +178,16 @@ class CollectionResource(EncodingResource):
                 raise errors.IdentifierError(identifier, actualIdentifier)
 
             self._collection.add(element)
-            return Created()
+            resource = Created()
+            if isLeaf:
+                return resource.render(request)
+            return resource
         except errors.SerializableError, e:
             contentType = self.defaultContentType
             encoder = self.encoders[contentType]
             errorResource = RESTErrorPage(e, encoder, contentType)
+            if isLeaf:
+                return errorResource.render(request)
             return errorResource
 
 
@@ -226,6 +234,11 @@ class CollectionResource(EncodingResource):
 
         response = {"results": results, "prev": prevURL, "next": nextURL}
         return encoder(response)
+
+
+    def render_POST(self, request):
+        # TODO This is shitty ... sorry
+        return self._createElement(None, request, True)
 
 
     def _getBounds(self, request):
@@ -323,6 +336,7 @@ class ElementResource(EncodingResource):
             encoder = self.encoders[contentType]
             errorResource = RESTErrorPage(e, encoder, contentType)
             return errorResource.render(request)
+
 
 
 
