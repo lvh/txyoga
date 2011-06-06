@@ -167,7 +167,7 @@ class Bikeshed(base.Element):
     The color can be changed liberally, but the functional properties of the
     bikeshed, such as the name and the maximum occupancy, are immutable.
     """
-    exposedAttributes = "name", "color", "maximumOccupancy"
+    exposedAttributes = "color", "maximumOccupancy"
     updatableAttributes = "color",
 
     def __init__(self, name, color):

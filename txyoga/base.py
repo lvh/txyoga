@@ -3,6 +3,8 @@
 """
 Base classes for objects that will be exposed through a REST API.
 """
+from functools import partial
+
 from zope.interface import implements
 
 from txyoga import errors, interface
@@ -51,14 +53,31 @@ class Element(object):
         """
         Updates an instance with new state.
 
-        @raise L{ForbiddenAttributeUpdateError}
+        Raises ``AttributeValueUpdateError`` when the state contains
+        an attribute which isn't allowed to be updated and the
+        matching attribute is not equal to the current value,
+        i.e. you're trying to update a value that isn't allowed to be
+        updated.
         """
-        if any(attr not in self.updatableAttributes for attr in state):
-            requested, allowed = list(state), self.updatableAttributes
-            raise errors.ForbiddenAttributeUpdateError(requested, allowed)
+        toUpdate = set()
+        for attr in state:
+            if attr in self.updatableAttributes:
+                toUpdate.add(attr)
+                continue
 
-        for attr, value in state.iteritems():
-            setattr(self, attr, value)
+            current, new = getattr(self, attr), state[attr]
+            if current == new:
+                continue
+
+            UpdateError = partial(errors.AttributeValueUpdateError,
+                                  attribute=attr, newValue=new)
+            if attr in self.exposedAttributes:
+                raise UpdateError(currentValue=current)
+            else: # Don't expose the current value by accident
+                raise UpdateError()
+    
+        for attr in toUpdate:
+            setattr(self, attr, state[attr])
 
 
 

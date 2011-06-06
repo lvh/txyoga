@@ -84,17 +84,24 @@ class MissingResourceError(SerializableError):
 
 
 
-class ForbiddenAttributeUpdateError(SerializableError):
+UNSPECIFIED = object()
+
+
+
+class AttributeValueUpdateError(SerializableError):
     """
-    Raised when attempting to update an attribute which is not allowed
-    to be updated.
+    Raised when attempting to update an element with some state that
+    has at least one immutable (non-updatable) attribute with a
+    different value than that in the existing element.
     """
     responseCode = http.FORBIDDEN
 
-    def __init__(self, requestedAttributes, updatableAttributes):
-        message = "attribute update not allowed, update aborted"
-        details = {"updatableAttributes": updatableAttributes,
-                   "requestedAttributes": requestedAttributes}
+    def __init__(self, attribute, newValue, currentValue=UNSPECIFIED):
+        message = ("attribute update not allowed and provided value differs"
+                   " from existing value, update aborted")
+        details = {"attribute": attribute, "newValue": newValue}
+        if currentValue is not UNSPECIFIED:
+            details["currentValue"] = currentValue
         SerializableError.__init__(self, message, details)
 
 
