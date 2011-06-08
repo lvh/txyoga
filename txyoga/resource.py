@@ -300,8 +300,6 @@ class ElementResource(EncodingResource):
     """
     A resource representing an element in a collection.
     """
-    encoders = {"application/json": jsonEncode}
-
     def __init__(self, element):
         Resource.__init__(self)
 
