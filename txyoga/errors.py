@@ -5,9 +5,30 @@ Serializable REST errors.
 """
 from zope.interface import implements
 
-from twisted.web import http
+from twisted.web import http, resource
 
 from txyoga import interface
+
+
+class RESTErrorPage(resource.Resource):
+    """
+    An alternative to C{ErrorPage} for REST APIs.
+
+    Wraps a L{SerializableError}, and produces a pretty serializable form.
+    """
+    def __init__(self, exception, encoder, contentType):
+        resource.Resource.__init__(self)
+
+        self.exception = exception
+        self.encoder = encoder
+        self.contentType = contentType
+
+
+    def render(self, request):
+        request.setHeader("Content-Type", self.contentType)
+        request.setResponseCode(self.exception.responseCode)
+        return self.encoder(self.exception)
+
 
 
 class SerializableError(Exception):

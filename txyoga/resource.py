@@ -10,28 +10,7 @@ from twisted.web.resource import IResource, Resource
 from twisted.web import http
 
 from txyoga import errors, interface
-from txyoga.serializers import json
-
-
-class RESTErrorPage(Resource):
-    """
-    An alternative to C{ErrorPage} for REST APIs.
-
-    Wraps a L{SerializableError}, and produces a pretty serializable form.
-    """
-    def __init__(self, exception, encoder, contentType):
-        Resource.__init__(self)
-
-        self.exception = exception
-        self.encoder = encoder
-        self.contentType = contentType
-
-
-    def render(self, request):
-        request.setHeader("Content-Type", self.contentType)
-        request.setResponseCode(self.exception.responseCode)
-        return self.encoder(self.exception)
-
+from txyoga.serializers import json, decodes
 
 
 class RESTResourceJSONEncoder(json.JSONEncoder):
@@ -186,7 +165,7 @@ class CollectionResource(EncodingResource):
         except errors.SerializableError, e:
             contentType = self.defaultContentType
             encoder = self.encoders[contentType]
-            errorResource = RESTErrorPage(e, encoder, contentType)
+            errorResource = errors.RESTErrorPage(e, encoder, contentType)
             return errorResource
 
 
@@ -203,7 +182,7 @@ class CollectionResource(EncodingResource):
             contentType = self.defaultContentType
             encoder = self.encoders[contentType]
 
-        return RESTErrorPage(e, encoder, contentType)
+        return errors.RESTErrorPage(e, encoder, contentType)
 
 
     def render_GET(self, request):
@@ -224,7 +203,7 @@ class CollectionResource(EncodingResource):
             attrs = self._collection.exposedElementAttributes
             results = [element.toState(attrs) for element in elements]
         except errors.SerializableError, e:
-            errorResource = RESTErrorPage(e, encoder, contentType)
+            errorResource = errors.RESTErrorPage(e, encoder, contentType)
             return errorResource.render(request)
 
         if (stop - start) > len(elements):
@@ -318,22 +297,15 @@ class ElementResource(EncodingResource):
             state = self._element.toState()
             return encoder(state)
         except errors.SerializableError, e:
-            errorResource = RESTErrorPage(e, encoder, contentType)
+            errorResource = errors.RESTErrorPage(e, encoder, contentType)
             return errorResource.render(request)
 
 
-    def render_PUT(self, request):
-        try:
-            decoder, contentType = self._getDecoder(request)
-            state = decoder(request.content)
-            self._element.update(state)
-            return ""
-        except errors.SerializableError, e:
-            contentType = self.defaultContentType
-            encoder = self.encoders[contentType]
-            errorResource = RESTErrorPage(e, encoder, contentType)
-            return errorResource.render(request)
-
+    @decodes
+    def render_PUT(self, request, decoder):
+        state = decoder(request.content)
+        self._element.update(state)
+        return ""
 
 
 
