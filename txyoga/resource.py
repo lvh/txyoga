@@ -146,7 +146,6 @@ class CollectionResource(EncodingResource):
 
             return IResource(self._collection[path])
         except KeyError:
-            # todo: i'm pretty certain we should only allow POST here
             if request.method == 'PUT' and not request.postpath:
                 return self._createElement(request, identifier=path)
 
