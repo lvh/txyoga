@@ -280,17 +280,11 @@ class ElementResource(EncodingResource):
             self.putChild(childName, IResource(child))
 
 
-    def render_GET(self, request):
-        contentType = self.defaultContentType
-        encoder = self.encoders[self.defaultContentType]
-
-        try:
-            encoder, contentType = self._getEncoder(request)
-            state = self._element.toState()
-            return encoder(state)
-        except errors.SerializableError, e:
-            errorResource = errors.RESTErrorPage(e, encoder, contentType)
-            return errorResource.render(request)
+    @encodes()
+    def render_GET(self, request, encoder):
+        encoder, contentType = self._getEncoder(request)
+        state = self._element.toState()
+        return encoder(state)
 
 
     @decodes()
