@@ -139,7 +139,8 @@ class CollectionResource(EncodingResource):
         return Deleted()
 
 
-    def _createElement(self, request, identifier=None):
+    @reportErrors
+    def _createElement(self, request, decoder, identifier=None):
         """
         Attempts to create an element.
 
@@ -149,24 +150,16 @@ class CollectionResource(EncodingResource):
         identifier does not match the identifier of the new element,
         `IdentifierError` is raised.
         """
-        try:
-            decoder, contentType = self._getDecoder(request)
-            state = decoder(request.content)
+        state = decoder(request.content)
+        element = self._collection.createElementFromState(state)
 
-            element = self._collection.createElementFromState(state)
+        if identifier is not None:
+            actualIdentifier = getattr(element, element.identifyingAttribute)
+            if actualIdentifier != identifier:
+                raise errors.IdentifierError(identifier, actualIdentifier)
 
-            if identifier is not None:
-                actualIdentifier = getattr(element, element.identifyingAttribute)
-                if actualIdentifier != identifier:
-                    raise errors.IdentifierError(identifier, actualIdentifier)
-
-            self._collection.add(element)
-            return Created()
-        except errors.SerializableError, e:
-            contentType = self.defaultContentType
-            encoder = self.encoders[contentType]
-            errorResource = errors.RESTErrorPage(e, encoder, contentType)
-            return errorResource
+        self._collection.add(element)
+        return Created()
 
 
     def _missingElement(self, element, request):
