@@ -5,7 +5,7 @@ Tests for the parsing of Accept headers.
 """
 from twisted.trial.unittest import TestCase
 
-from txyoga.resource import _parseAccept
+from txyoga.serializers import _parseAccept
 
 
 fuzzingParameters = {"=": [" =", "= ", " = "],

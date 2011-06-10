@@ -6,7 +6,7 @@ Tests for basic class serialization and deserialization.
 from twisted.trial.unittest import TestCase
 
 from txyoga.base import Collection, Element
-from txyoga.resource import jsonEncode
+from txyoga.serializers import jsonEncode
 
 
 class Screwdriver(Element):

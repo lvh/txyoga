@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c), 2011, the txYoga authors. See the LICENSE file for details.
 """
-Access to serialization modules.
+Serialization support.
 """
 from functools import wraps
 from inspect import getargspec
@@ -10,7 +10,68 @@ try: # pragma: no cover
 except ImportError:# pragma: no cover
     import json
 
-from txyoga import errors
+from twisted.web.resource import Resource
+
+from txyoga import errors, interface
+
+
+def jsonEncode(obj):
+    return json.dumps(obj, cls=RESTResourceJSONEncoder)
+
+
+
+class RESTResourceJSONEncoder(json.JSONEncoder):
+    """
+    A JSON encoder for REST resources.
+
+    Equivalent to L{json.JSONEncoder}, except it also encodes
+    L{SerializableError}s.
+    """
+    def default(self, obj):
+        if interface.ISerializableError.providedBy(obj):
+            return {"errorMessage": obj.message, "errorDetails": obj.details}
+        return json.JSONEncoder.default(self, obj)
+
+
+
+class EncodingResource(Resource):
+    """
+    A resource that understands content types.
+    """
+    encoders = {"application/json": jsonEncode}
+    decoders = {"application/json": json.load}
+    defaultContentType = "application/json"
+
+
+    def _getEncoder(self, request):
+        accept = request.getHeader("Accept") or self.defaultContentType
+        accepted = [contentType.lower() for contentType, _ in _parseAccept(accept)]
+
+        for contentType in accepted:
+            try:
+                encoder = self.encoders[contentType]
+                request.setHeader("Content-Type", contentType)
+                return encoder, contentType
+            except KeyError:
+                continue
+
+        raise errors.UnacceptableRequestError(self.encoders.keys(), accepted)
+
+
+    def _getDecoder(self, request):
+        contentType = request.getHeader("Content-Type")
+        if contentType is None:
+            supportedTypes = self.decoders.keys()
+            raise errors.MissingContentType(supportedTypes)
+
+        try:
+            decoder = self.decoders[contentType]
+            return decoder, contentType
+        except KeyError:
+            supportedTypes = self.decoders.keys()
+            raise errors.UnsupportedContentTypeError(supportedTypes,
+                                                     contentType)
+
 
 
 ADDED_KEYS = frozenset(["encoder", "decoder"])
@@ -35,14 +96,29 @@ def reportErrors(m):
 
             return m(self, request, *args, **kwargs)
         except errors.SerializableError, e:
-            if needs == "decoder":
-                contentType = self.defaultContentType
-                encoder = self.encoders[contentType]
-
             errorResource = errors.RESTErrorPage(e, encoder, contentType)
-            if renders:
-                return errorResource.render(request)
-            else:
-                return errorResource
+            return errorResource.render(request) if renders else errorResource
 
     return wrapper
+
+
+def _parseAccept(header):
+    accepted = []
+
+    for part in header.strip(".").split(","):
+        part = part.strip()
+
+        if not part:
+            continue # Begone, vile hellspawn!
+
+        elements = part.split(";")
+        contentType, rawParams = elements[0].strip(), elements[1:]
+
+        params = {}
+        for param in rawParams:
+            key, value = map(str.strip, param.split("=", 1))
+            params[key] = value
+
+        accepted.append((contentType, params))
+
+    return accepted
