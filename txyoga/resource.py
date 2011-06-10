@@ -301,7 +301,7 @@ class ElementResource(EncodingResource):
             return errorResource.render(request)
 
 
-    @decodes
+    @decodes()
     def render_PUT(self, request, decoder):
         state = decoder(request.content)
         self._element.update(state)
