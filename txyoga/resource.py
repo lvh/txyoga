@@ -10,7 +10,7 @@ from twisted.web.resource import IResource, Resource
 from twisted.web import http
 
 from txyoga import errors, interface
-from txyoga.serializers import decodes, encodes, json, reportErrors
+from txyoga.serializers import json, reportErrors
 
 
 class RESTResourceJSONEncoder(json.JSONEncoder):

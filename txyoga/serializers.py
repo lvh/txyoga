@@ -13,47 +13,6 @@ except ImportError:# pragma: no cover
 from txyoga import errors
 
 
-def decodes(renders=True):
-    def decorator(m):
-        @wraps(m)
-        def wrapper(self, request):
-            try:
-                decoder, _ = self._getDecoder(request)
-                return m(self, request, decoder)
-            except errors.SerializableError, e:
-                contentType = self.defaultContentType
-                encoder = self.encoders[contentType]
-                errorResource = errors.RESTErrorPage(e, encoder, contentType)
-
-                if renders:
-                    return errorResource.render(request)
-                else:
-                    return errorResource
-
-        return wrapper
-    return decorator
-
-
-def encodes(renders=True):
-    def decorator(m):
-        @wraps(m)
-        def wrapper(self, request):
-            contentType = self.defaultContentType
-            encoder = self.encoders[contentType]
-            try:
-                encoder, contentType = self._getEncoder(request)
-                return m(self, request, encoder)
-            except errors.SerializableError, e:
-                errorResource = errors.RESTErrorPage(e, encoder, contentType)
-                if renders:
-                    return errorResource.render(request)
-                else:
-                    return errorResource
-
-        return wrapper
-    return decorator
-
-
 ADDED_KEYS = frozenset(["encoder", "decoder"])
 
 
