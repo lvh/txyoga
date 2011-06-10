@@ -62,7 +62,8 @@ class CollectionResource(EncodingResource):
         """
         try:
             if request.method == "DELETE" and not request.postpath:
-                return self._deleteElement(path)
+                self._collection.removeByIdentifier(path)
+                return Deleted()
 
             return IResource(self._collection[path])
         except KeyError:
@@ -71,13 +72,6 @@ class CollectionResource(EncodingResource):
 
             return self._missingElement(request, path)
 
-
-    def _deleteElement(self, identifier):
-        """
-        Attempts to delete an element.
-        """
-        self._collection.removeByIdentifier(identifier)
-        return Deleted()
 
 
     @reportErrors
