@@ -10,7 +10,7 @@ from twisted.web.resource import IResource, Resource
 from twisted.web import http
 
 from txyoga import errors, interface
-from txyoga.serializers import json, decodes
+from txyoga.serializers import decodes, encodes, json
 
 
 class RESTResourceJSONEncoder(json.JSONEncoder):
@@ -185,26 +185,18 @@ class CollectionResource(EncodingResource):
         return errors.RESTErrorPage(e, encoder, contentType)
 
 
-    def render_GET(self, request):
+    @encodes(renders=True)
+    def render_GET(self, request, encoder):
         """
         Renders the collection.
         """
-        contentType = self.defaultContentType
-        encoder = self.encoders[contentType]
+        start, stop = self._getBounds(request)
+        url = request.prePathURL()
+        prevURL, nextURL = self._getPaginationURLs(url, start, stop)
 
-        try:
-            encoder, contentType = self._getEncoder(request)
-
-            start, stop = self._getBounds(request)
-            url = request.prePathURL()
-            prevURL, nextURL = self._getPaginationURLs(url, start, stop)
-
-            elements = self._collection[start:stop]
-            attrs = self._collection.exposedElementAttributes
-            results = [element.toState(attrs) for element in elements]
-        except errors.SerializableError, e:
-            errorResource = errors.RESTErrorPage(e, encoder, contentType)
-            return errorResource.render(request)
+        elements = self._collection[start:stop]
+        attrs = self._collection.exposedElementAttributes
+        results = [element.toState(attrs) for element in elements]
 
         if (stop - start) > len(elements):
             # Not enough elements -> end of the collection

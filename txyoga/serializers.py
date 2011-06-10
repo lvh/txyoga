@@ -31,3 +31,24 @@ def decodes(renders=True):
 
         return wrapper
     return decorator
+
+
+def encodes(renders=True):
+    def decorator(m):
+        @wraps(m)
+        def wrapper(self, request):
+            contentType = self.defaultContentType
+            encoder = self.encoders[contentType]
+            try:
+                encoder, contentType = self._getEncoder(request)
+                return m(self, request, encoder)
+            except errors.SerializableError, e:
+                errorResource = errors.RESTErrorPage(e, encoder, contentType)
+                if renders:
+                    return errorResource.render(request)
+                else:
+                    return errorResource
+
+        return wrapper
+    return decorator
+
