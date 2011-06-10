@@ -10,7 +10,7 @@ from twisted.web.resource import IResource, Resource
 from twisted.web import http
 
 from txyoga import errors, interface
-from txyoga.serializers import decodes, encodes, json
+from txyoga.serializers import decodes, encodes, json, reportErrors
 
 
 class RESTResourceJSONEncoder(json.JSONEncoder):
@@ -169,7 +169,6 @@ class CollectionResource(EncodingResource):
             return errorResource
 
 
-
     def _missingElement(self, element, request):
         """
         Reports client about a missing element.
@@ -185,7 +184,7 @@ class CollectionResource(EncodingResource):
         return errors.RESTErrorPage(e, encoder, contentType)
 
 
-    @encodes(renders=True)
+    @reportErrors
     def render_GET(self, request, encoder):
         """
         Renders the collection.
@@ -280,14 +279,14 @@ class ElementResource(EncodingResource):
             self.putChild(childName, IResource(child))
 
 
-    @encodes()
+    @reportErrors
     def render_GET(self, request, encoder):
         encoder, contentType = self._getEncoder(request)
         state = self._element.toState()
         return encoder(state)
 
 
-    @decodes()
+    @reportErrors
     def render_PUT(self, request, decoder):
         state = decoder(request.content)
         self._element.update(state)
