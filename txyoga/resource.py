@@ -73,7 +73,6 @@ class CollectionResource(EncodingResource):
             return self._missingElement(request, path)
 
 
-
     @reportErrors
     def _createElement(self, request, decoder, identifier=None):
         """
@@ -202,7 +201,6 @@ class ElementResource(EncodingResource):
 
     @reportErrors
     def render_GET(self, request, encoder):
-        encoder, contentType = self._getEncoder(request)
         state = self._element.toState()
         return encoder(state)
 
