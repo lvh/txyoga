@@ -23,16 +23,17 @@ def reportErrors(m):
     @wraps(m)
     def wrapper(self, request, *args, **kwargs):
         try:
+            contentType = self.defaultContentType
+            encoder = self.encoders[contentType]
+
             if needs == "encoder":
-                contentType = self.defaultContentType
-                encoder = self.encoders[contentType]
                 encoder, contentType = self._getEncoder(request)
                 kwargs["encoder"] = encoder
             elif needs == "decoder":
                 decoder, _ = self._getDecoder(request)
                 kwargs["decoder"] = decoder
 
-            return m(self, request=request, *args, **kwargs)
+            return m(self, request, *args, **kwargs)
         except errors.SerializableError, e:
             if needs == "decoder":
                 contentType = self.defaultContentType

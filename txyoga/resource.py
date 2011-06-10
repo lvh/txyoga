@@ -128,7 +128,7 @@ class CollectionResource(EncodingResource):
             if request.method == 'PUT' and not request.postpath:
                 return self._createElement(request, identifier=path)
 
-            return self._missingElement(path, request)
+            return self._missingElement(request, path)
 
 
     def _deleteElement(self, identifier):
@@ -161,20 +161,13 @@ class CollectionResource(EncodingResource):
         self._collection.add(element)
         return Created()
 
-
-    def _missingElement(self, element, request):
+    
+    @reportErrors
+    def _missingElement(self, request, element):
         """
         Reports client about a missing element.
         """
-        e = errors.MissingResourceError("no such element %s" % (element,))
-
-        try:
-            encoder, contentType = self._getEncoder(request)
-        except errors.UnacceptableRequestError:
-            contentType = self.defaultContentType
-            encoder = self.encoders[contentType]
-
-        return errors.RESTErrorPage(e, encoder, contentType)
+        raise errors.MissingResourceError("no such element %s" % (element,))
 
 
     @reportErrors
