@@ -74,11 +74,8 @@ class EncodingResource(Resource):
 
 
 
-ADDED_KEYS = frozenset(["encoder", "decoder"])
-
-
 def reportErrors(m):
-    needs, = (ADDED_KEYS & set(getargspec(m).args)) or [None]
+    arguments = getargspec(m).args
     renders = "render" in m.__name__
 
     @wraps(m)
@@ -87,10 +84,10 @@ def reportErrors(m):
             contentType = self.defaultContentType
             encoder = self.encoders[contentType]
 
-            if needs == "encoder":
+            if "encoder" in arguments:
                 encoder, contentType = self._getEncoder(request)
                 kwargs["encoder"] = encoder
-            elif needs == "decoder":
+            elif "decoder" in arguments:
                 decoder, _ = self._getDecoder(request)
                 kwargs["decoder"] = decoder
 
