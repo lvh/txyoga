@@ -16,6 +16,9 @@ from txyoga import errors, interface
 
 
 def jsonEncode(obj):
+    """
+    Encodes an object to JSON using the ``RESTResourceJSONEncoder``.
+    """
     return json.dumps(obj, cls=RESTResourceJSONEncoder)
 
 
@@ -24,8 +27,8 @@ class RESTResourceJSONEncoder(json.JSONEncoder):
     """
     A JSON encoder for REST resources.
 
-    Equivalent to L{json.JSONEncoder}, except it also encodes
-    L{SerializableError}s.
+    Equivalent to ``json.JSONEncoder``, except it also encodes
+    ``SerializableError``s.
     """
     def default(self, obj):
         if interface.ISerializableError.providedBy(obj):
@@ -45,7 +48,8 @@ class EncodingResource(Resource):
 
     def _getEncoder(self, request):
         accept = request.getHeader("Accept") or self.defaultContentType
-        accepted = [contentType.lower() for contentType, _ in _parseAccept(accept)]
+        parsed = _parseAccept(accept)
+        accepted = [contentType.lower() for contentType, _ in accepted]
 
         for contentType in accepted:
             try:
