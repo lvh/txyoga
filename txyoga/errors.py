@@ -44,7 +44,7 @@ class SerializableError(Exception):
 
 
 
-class UnsupportedContentTypeError(SerializableError):
+class UnsupportedContentType(SerializableError):
     """
     Raised when the provided content type is unsupported.
 
@@ -73,7 +73,7 @@ class MissingContentType(SerializableError):
 
 
 
-class UnacceptableRequestError(SerializableError):
+class UnacceptableRequest(SerializableError):
     """
     Raised when the requested resource could not be provided in one of the
     accepted content types.

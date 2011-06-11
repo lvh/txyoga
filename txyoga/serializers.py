@@ -55,7 +55,7 @@ class EncodingResource(Resource):
             except KeyError:
                 continue
 
-        raise errors.UnacceptableRequestError(self.encoders.keys(), accepted)
+        raise errors.UnacceptableRequest(self.encoders.keys(), accepted)
 
 
     def _getDecoder(self, request):
@@ -69,8 +69,7 @@ class EncodingResource(Resource):
             return decoder, contentType
         except KeyError:
             supportedTypes = self.decoders.keys()
-            raise errors.UnsupportedContentTypeError(supportedTypes,
-                                                     contentType)
+            raise errors.UnsupportedContentType(supportedTypes, contentType)
 
 
 
