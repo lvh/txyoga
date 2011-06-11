@@ -103,6 +103,15 @@ def reportErrors(m):
 
 
 def _parseAccept(header):
+    """
+    Parses an Accept header.
+
+    Returns an iterable of 2-tuples with the content type and the
+    matching parameters. The parameters is a dictionary with the
+    key-value pairs of the parameters. This dictionary should either
+    be empty or contain a single key (``"q"``). The matching value
+    determines the preference of the client for that content type.
+    """
     accepted = []
 
     for part in header.strip(".").split(","):
