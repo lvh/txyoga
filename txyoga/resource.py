@@ -107,7 +107,12 @@ class CollectionResource(EncodingResource):
     @reportErrors
     def render_GET(self, request, encoder):
         """
-        Renders the collection.
+        Displays the collection.
+
+        If the collection is too large to be displayed at once, it
+        will display a part of the collection, one page at a
+        time. Each page will have links to the previous and next
+        pages.
         """
         start, stop = self._getBounds(request)
         url = request.prePathURL()
@@ -126,6 +131,9 @@ class CollectionResource(EncodingResource):
 
 
     def render_POST(self, request):
+        """
+        Creates a new element in the collection.
+        """
         resource = self._createElement(request)
         return resource.render(request)
 
@@ -201,12 +209,18 @@ class ElementResource(EncodingResource):
 
     @reportErrors
     def render_GET(self, request, encoder):
+        """
+        Displays the element.
+        """
         state = self._element.toState()
         return encoder(state)
 
 
     @reportErrors
     def render_PUT(self, request, decoder):
+        """
+        Updates the element.
+        """
         state = decoder(request.content)
         self._element.update(state)
         return ""
