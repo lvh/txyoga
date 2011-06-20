@@ -49,7 +49,7 @@ class EncodingResource(Resource):
     def _getEncoder(self, request):
         accept = request.getHeader("Accept") or self.defaultContentType
         parsed = _parseAccept(accept)
-        accepted = [contentType.lower() for contentType, _ in accepted]
+        accepted = [contentType.lower() for contentType, _ in parsed]
 
         for contentType in accepted:
             try:
