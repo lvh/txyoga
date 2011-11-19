@@ -1,5 +1,5 @@
 """
-Generic utilities for testing txYoga.
+Generic utilities for testing txyoga.
 """
 from functools import partial
 from StringIO import StringIO

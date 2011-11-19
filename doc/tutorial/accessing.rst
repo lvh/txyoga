@@ -2,7 +2,7 @@
  Accessing collections and elements
 ====================================
 
-To introduce txYoga, we're going to start with a simple example of a
+To introduce txyoga, we're going to start with a simple example of a
 bunch of employees who work at a startup (because blogs with articles
 are just cliché).
 
@@ -22,7 +22,7 @@ attribute.
 
 Note the comma at the end: the attribute is an iterable of the
 collection names (in this case, a tuple with one element). If you left
-it out, txYoga would just see a string, which is *also* an iterable of
+it out, txyoga would just see a string, which is *also* an iterable of
 strings, but it's quite likely that you don't want to expose the
 attributes ``'n', 'a', 'm', 'e'``...
 
@@ -61,7 +61,7 @@ Trying it out
    from tutorial.util import buildPath, Example
 
 You can access the entire collection by sending an HTTP GET request to
-the root resource. txYoga uses JSON as the default serialization
+the root resource. txyoga uses JSON as the default serialization
 format. The examples use the ``json`` and ``httplib`` [#whyhttplib]_
 modules from the standard library.
 
@@ -115,7 +115,7 @@ supporting pagination. In this case, they're both ``None``, indicating
 that there is neither a previous nor a next page. A later tutorial
 example will demonstrate how paginating collections works.
 
-txYoga is being a good HTTP citizen behind the scenes, telling you the
+txyoga is being a good HTTP citizen behind the scenes, telling you the
 date, the web server serving the request, and content length and type
 behind the scenes.
 
@@ -126,8 +126,8 @@ behind the scenes.
    >>> expectedKeys = ["date", "content-type", "content-length", "server"]
    >>> assert all(k in headerKeys for k in expectedKeys)
 
-txYoga will never return responses with missing content types. A later
-tutorial example on content type support in txYoga will elaborate on this.
+txyoga will never return responses with missing content types. A later
+tutorial example on content type support in txyoga will elaborate on this.
 
 .. doctest::
 
@@ -135,7 +135,7 @@ tutorial example on content type support in txYoga will elaborate on this.
    'application/json'
 
 Admittedly, it really is Twisted Web telling you it's serving the
-request and the time it served it, not txYoga, but it's still nice:
+request and the time it served it, not txyoga, but it's still nice:
 
 .. doctest::
 
@@ -163,7 +163,7 @@ each object. You could have a particular company that does expose the
 titles of its employees when you query it, or a particular employee
 that will divulge his salary.
 
-As before, txYoga will serve the content type correctly:
+As before, txyoga will serve the content type correctly:
 
 .. doctest::
 
@@ -175,7 +175,7 @@ Review
 
 In this example, we've:
 
-   1. shown what basic txYoga code looks like
+   1. shown what basic txyoga code looks like
    2. shown how the tutorial example helpers work
    3. accessed collections and their elements over HTTP
 

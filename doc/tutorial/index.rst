@@ -47,7 +47,7 @@ When you're done::
 Running ``twistd`` manually
 ---------------------------
 
-Run following command from the txYoga base directory::
+Run following command from the txyoga base directory::
 
     twistd -n web --path doc/tutorial
 

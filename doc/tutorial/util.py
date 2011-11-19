@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Utilties for making HTTP requests to txYoga tutorial examples.
+Utilties for making HTTP requests to txyoga tutorial examples.
 """
 import functools
 import httplib
@@ -13,7 +13,7 @@ def buildPath(*parts):
 
 class Example(object):
     """
-    A txYoga tutorial example.
+    A txyoga tutorial example.
     """
     def __init__(self, exampleName, host="localhost:8080"):
         self._makeConnection = functools.partial(httplib.HTTPConnection, host)

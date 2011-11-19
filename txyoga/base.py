@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c), 2011, the txYoga authors. See the LICENSE file for details.
+# Copyright (c), 2011, the txyoga authors. See the LICENSE file for details.
 """
 Base classes for objects that will be exposed through a REST API.
 """

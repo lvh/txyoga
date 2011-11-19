@@ -51,7 +51,7 @@ two usual ways of creating elements:
    2. If you want to make an element accessible at a particular path,
    PUT it there.
 
-Just like everywhere else, when faced with doubt, txYoga refuses the
+Just like everywhere else, when faced with doubt, txyoga refuses the
 temptation to guess. In this case, when you provide data through POST
 or PUT, specifying the encoding is mandatory.
 

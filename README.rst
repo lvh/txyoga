@@ -1,13 +1,13 @@
 ========
- txYoga
+ txyoga
 ========
 
-txYoga is a REST_ toolkit for Twisted_.
+txyoga is a REST_ toolkit for Twisted_.
 
 .. _REST: https://secure.wikimedia.org/wikipedia/en/wiki/Representational_State_Transfer
 .. _Twisted: http://www.twistedmatrix.com/
 
-You define a collection and some elements for that collection. txYoga gives
+You define a collection and some elements for that collection. txyoga gives
 you a resource, which Twisted then lets you serve to clients.
 
 Where did the name from?
