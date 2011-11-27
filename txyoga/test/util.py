@@ -187,7 +187,6 @@ class _BaseCollectionTest(object):
         """
         Create a new element.
         """
-        #import pdb; pdb.set_trace()
         if method == "PUT":
             self.updateElement(name, body, headers)
         elif method == "POST":
