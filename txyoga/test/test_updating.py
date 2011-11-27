@@ -29,7 +29,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         self.body = allowedUpdateState
 
 
-    def _test_updateElement(self, expectedStatusCode=http.OK):
+    def _testUpdate(self, expectedStatusCode=http.OK):
         """
         Tries to change the color of a bikeshed.
         """
@@ -57,32 +57,32 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         self.assertEqual(self.responseContent, expectedContent)
 
 
-    def test_updateElement_simple(self):
+    def test_simple(self):
         """
         Test that updating an element works.
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
-        self._test_updateElement()
+        self._testUpdate()
 
 
-    def test_updateElement_missingContentType(self):
+    def test_missingContentType(self):
         """
         Test that trying to update an element when not specifying the content
         type fails.
         """
-        self._test_updateElement(http.UNSUPPORTED_MEDIA_TYPE)
+        self._testUpdate(http.UNSUPPORTED_MEDIA_TYPE)
 
 
-    def test_updateElement_badContentType(self):
+    def test_badContentType(self):
         """
         Test that trying to update an element when specifying a bad content
         type fails.
         """
         self.headers.setRawHeaders("Content-Type", ["ZALGO/ZALGO"])
-        self._test_updateElement(http.UNSUPPORTED_MEDIA_TYPE)
+        self._testUpdate(http.UNSUPPORTED_MEDIA_TYPE)
 
 
-    def test_updateElement_nonUpdatableAttribute(self):
+    def test_nonUpdatableAttribute(self):
         """
         Tests that updating an attribute which is not allowed to be updated
         responds that that operation is forbidden.
@@ -92,10 +92,10 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self.body = disallowedUpdateState
-        self._test_updateElement(http.FORBIDDEN)
+        self._testUpdate(http.FORBIDDEN)
 
 
-    def test_updateElement_partiallyUpdatableAttributes(self):
+    def test_partiallyUpdatableAttributes(self):
         """
         Tests that updates are atomic; when part of an update is not allowed,
         the entire update does not happen.
@@ -105,10 +105,10 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self.body = dict(disallowedUpdateState, **allowedUpdateState)
-        self._test_updateElement(http.FORBIDDEN)
+        self._testUpdate(http.FORBIDDEN)
 
 
-    def test_updateElement_completeState(self):
+    def test_completeState(self):
         """
         Tests that an update with complete state works.
 
@@ -118,7 +118,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self.body = dict(allowedUpdateState, **nilpotentUpdateState)
-        self._test_updateElement()
+        self._testUpdate()
 
 
 
@@ -134,7 +134,7 @@ class ManualUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         self.originalState = self.element.toState()
 
 
-    def _test_manualUpdate(self, state, exceptionClass=None, exposesValue=True):
+    def _testUpdate(self, state, exceptionClass=None, exposesValue=True):
         if exceptionClass is None:
             self.element.update(state)
             expectedState = state
@@ -154,21 +154,21 @@ class ManualUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
             self.assertEqual(getattr(self.element, attribute), value)
 
 
-    def test_updateElement_nonUpdatableAttribute(self):
+    def test_nonUpdatableAttribute(self):
         state = dict(disallowedUpdateState)
-        self._test_manualUpdate(state, AttributeValueUpdateError)
+        self._testUpdate(state, AttributeValueUpdateError)
 
 
-    def test_updateElement_nonUpdatableAttribute_dontLeakValue(self):
+    def test_nonUpdatableAttribute_dontLeakValue(self):
         state = dict(disallowedUpdateStateWithHiddenAttribute)
-        self._test_manualUpdate(state, AttributeValueUpdateError, False)
+        self._testUpdate(state, AttributeValueUpdateError, False)
 
 
-    def test_updateElement_partiallyUpdatableAttributes(self):
+    def test_partiallyUpdatableAttributes(self):
         state = dict(disallowedUpdateState, **allowedUpdateState)
-        self._test_manualUpdate(state, AttributeValueUpdateError)
+        self._testUpdate(state, AttributeValueUpdateError)
 
 
-    def test_updateElement_completeState(self):
+    def test_completeState(self):
         state = dict(allowedUpdateState, **nilpotentUpdateState)
-        self._test_manualUpdate(state)
+        self._testUpdate(state)

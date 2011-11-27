@@ -35,7 +35,7 @@ class SerializationTest(TestCase):
     """
     Test that serializing to some state works.
     """
-    def test_serialization_complete(self):
+    def test_complete(self):
         """
         Test serialization of a screwdriver.
         """
@@ -44,7 +44,7 @@ class SerializationTest(TestCase):
         self.assertEqual(state, {"head": "philips", "size": "m3"})
 
 
-    def test_serialization_partial(self):
+    def test_partial(self):
         """
         Test partial serialization of a screwdriver.
         """
@@ -58,7 +58,7 @@ class DeserializationTest(TestCase):
     """
     Test that deserializing from some state works.
     """
-    def test_deserialization(self):
+    def test_deserialize(self):
         """
         Deserialize a screwdriver.
         """
