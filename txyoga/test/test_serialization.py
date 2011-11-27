@@ -101,5 +101,4 @@ class JSONEncoderTests(TestCase):
         When given an unserializable type, the serializer should raise
         TypeError instead of failing silently.
         """
-        # Assumes TestCases aren't JSON serializable. Sounds reasonable?
-        self.assertRaises(TypeError, jsonEncode, self)
+        self.assertRaises(TypeError, jsonEncode, object())
