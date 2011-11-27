@@ -26,8 +26,8 @@ class PaginationTest(collections.PaginatedCollectionMixin, TestCase):
         self.addElements()
         self.getElements()
 
-        self.assertEqual(len(self.responseContent["results"]),
-                         self.collectionClass.pageSize)
+        numResults = len(self.responseContent["results"])
+        self.assertEqual(numResults, self.collectionClass.pageSize)
 
         self.assertEqual(self.responseContent["prev"], None)
         self.assertNotEqual(self.responseContent["next"], None)
@@ -42,7 +42,8 @@ class PaginationTest(collections.PaginatedCollectionMixin, TestCase):
         elementsPerPage = []
 
         pageSize = self.collectionClass.pageSize
-        pages = int(ceil(float(len(self.elementArgs))/pageSize))
+        completePages, remaining = divmod(len(self.elementArgs), pageSize)
+        pages = completePages + (1 if remaining else 0)
 
         def hashable(d):
             """
@@ -63,8 +64,7 @@ class PaginationTest(collections.PaginatedCollectionMixin, TestCase):
             Gets the args for getting the next page.
             """
             nextURL = self.responseContent["next"]
-            _, _, _, qs, _ = urlsplit(nextURL)
-            nextQuery = parse_qsl(qs)
+            nextQuery = parse_qsl(urlsplit(nextURL).query)
 
             nextQueryKeys = [key for key, _ in nextQuery]
             for key in ("start", "stop"):
