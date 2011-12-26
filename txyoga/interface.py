@@ -19,7 +19,7 @@ class IStore(Interface):
         """
 
 
-    def query(start=None, stop=None):
+    def query(start=0, stop=None):
         """
         Gets the elements that match the given query parameters.
 
