@@ -22,9 +22,13 @@ updates are allowed. In this case, it's ``salary`` and ``title`` -- we
 can give people new positions and give them raises, but not change
 their names.
 
-Then there is the ``elementClass`` attribute on the collection
+Note that although you can update salaries, this change will never be
+externally visible. This is because ``salary`` is `not` an exposed
+attribute.
+
+Then there is the ``defaultElementClass`` attribute on the collection
 class. By default, this class will be instantiated when new elements
-are added.
+are added. In this case, new elements will be ``Employee``s.
 
 Trying it out
 =============
@@ -39,6 +43,9 @@ Like before, start by creating the helper object for this example:
 .. doctest::
 
    >>> example = Example("crud")
+   >>> response = example.get()
+   >>> response.status, response.reason
+   (200, 'OK')
 
 Creating an element
 -------------------
@@ -51,27 +58,51 @@ two usual ways of creating elements:
    2. If you want to make an element accessible at a particular path,
    PUT it there.
 
+.. doctest::
+
+   >>> data = {"name": u"alice", "title": "Engineer", "salary": 5000}
+   >>> headers = {"content-type": "application/json"}
+   >>> response = example.put(json.dumps(data), headers, "alice")
+
+The response says that the element has been created:
+
+.. doctest::
+
+   >>> response.status, response.reason
+   (201, 'Created')
+
 Just like everywhere else, when faced with doubt, txyoga refuses the
 temptation to guess. In this case, when you provide data through POST
 or PUT, specifying the encoding is mandatory.
 
 .. doctest::
 
-   >>> data = {"name": u"alice"}
-   >>> headers = {"content-type": "application.json"}
-   >>> response = example.put(json.dumps(data), headers, "alice")
-
-As usual, we get the appropriate response:
-
-.. doctest::
-
+   >>> data["name"] = u"mallory"
+   >>> response = example.put(json.dumps(data), {}, "mallory")
    >>> response.status, response.reason
+   (415, 'Unsupported Media Type')
 
 Updating an element
 -------------------
 
-Now that the company's grown, lvh really deserves a title bump and a
-raise. In REST, updates are typically done using a PUT request.
+Now that the company's grown, lvh really deserves a new title. To do this,
+we update his record. In REST, updates are typically done using a PUT
+request.
+
+.. doctest::
+
+   >>> def getTitle():
+   ...     return json.load(example.get("lvh"))["title"]
+   >>> getTitle()
+   u'CEO'
+   >>> headers = {"content-type": "application/json"}
+   >>> newTitle = u"President and CEO"
+   >>> data = {"title": newTitle}
+   >>> response = example.put(json.dumps(data), headers, "lvh")
+   >>> response.status, response.reason
+   (200, 'OK')
+   >>> getTitle()
+   u'President and CEO'
 
 Deleting an element
 -------------------
@@ -96,4 +127,5 @@ When you access the collection again, Asook is missing, as expected:
 .. doctest::
 
    >>> employees = json.load(example.get())["results"]
-   >>> assert u"asook" not in employees
+   >>> u"asook" not in employees
+   False

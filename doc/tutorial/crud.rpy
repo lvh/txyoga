@@ -10,7 +10,6 @@ class Employee(Element):
     """
     exposedAttributes = "name", "title"
     updatableAttributes = "salary", "title"
-    
 
     def __init__(self, name, title, salary):
         self.name = name
@@ -23,7 +22,7 @@ class Company(Collection):
     """
     A company.
     """
-    elementClass = Employee
+    defaultElementClass = Employee
     exposedElementAttributes = "name",
 
 
