@@ -8,7 +8,7 @@ class UnknownCollectionError(RuntimeError):
     Raised when attemption to interact with a collection unknown to a store.
     """
     def __init__(self, collection, store):
-        message = "{} doesn't have {}".format(store, collection)
+        message = "{0} doesn't have {1}".format(store, collection)
         RuntimeError.__init__(self, message)
 
 

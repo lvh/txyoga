@@ -88,7 +88,7 @@ class _CollectionRecord(object):
 
     def __setitem__(self, key, value):
         if key in self._mapping:
-            raise KeyError("duplicate key {}".format(key))
+            raise KeyError("duplicate key {0}".format(key))
 
         self._mapping[key] = value
         self._elements.append(value)
