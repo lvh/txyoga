@@ -127,5 +127,4 @@ When you access the collection again, Asook is missing, as expected:
 .. doctest::
 
    >>> employees = json.load(example.get())["results"]
-   >>> u"asook" not in employees
-   False
+   >>> assert u"asook" not in employees
