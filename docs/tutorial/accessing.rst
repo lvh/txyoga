@@ -9,7 +9,7 @@ are just cliché).
 Example code
 ============
 
-.. literalinclude:: company.rpy
+.. literalinclude:: accessing.rpy
    :language: python
 
 First, the code defines a collection class called
@@ -89,12 +89,11 @@ expect:
    >>> buildPath("test.rpy", "lvh", "minions")
    '/test.rpy/lvh/minions'
 
-Create an Example object for this tutorial example (``"company"``,
-since that's the example code being used):
+Create an Example object for this tutorial example:
 
 .. doctest::
 
-   >>> example = Example("company")
+   >>> example = Example("accessing")
 
 Accessing the collection
 ------------------------
