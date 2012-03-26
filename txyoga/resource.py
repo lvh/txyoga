@@ -60,7 +60,6 @@ class CollectionResource(EncodingResource):
         updating is an operation on elements that already exist, that is
         handled by the corresponding ElementResource.
         """
-        import pdb; pdb.set_trace()
         try:
             if request.method == "DELETE" and not request.postpath:
                 self._collection.removeByIdentifier(path)
