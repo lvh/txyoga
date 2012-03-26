@@ -69,4 +69,4 @@ List of examples
 .. toctree::
 
    accessing
-   createdelete
+   crud
