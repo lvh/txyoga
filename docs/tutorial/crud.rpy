@@ -1,4 +1,6 @@
 # -*- mode: python; coding: utf-8 -*-
+cache()
+
 from twisted.web.resource import IResource
 
 from txyoga import Collection, Element
