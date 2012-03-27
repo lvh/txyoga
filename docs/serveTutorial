@@ -10,17 +10,23 @@ then
     exit
 fi
 
+DIR="$( cd "$( dirname "$0" )" && pwd )"
+
 case "$1" in
 
-start) 	twistd web --path=tutorial &&\
+start) 	twistd --pidfile $DIR/tutorial.pid \
+               --logfile $DIR/tutorial.log \
+               web --path=$DIR/tutorial && \
 	echo "Tutorial server started at port 8080..."
 	;;
-stop)	if [ -f twistd.pid ]
+stop)	if [ -f $DIR/tutorial.pid ]
 	then
-	    kill `cat twistd.pid` && rm twistd.log &&\
+	    kill `cat $DIR/tutorial.pid` && \
+            rm $DIR/tutorial.log && \
             echo "Tutorial server stopped..."
 	else
 	    echo "Couldn't find pidfile, aborting..."
 	fi
 	;;
 esac
+
