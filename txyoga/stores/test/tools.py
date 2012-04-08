@@ -108,7 +108,8 @@ class StoreTestMixin(object):
 
 
     def test_removeNonexistent(self):
-        pass
+        d = self.store.remove(self.collection, cookie.name)
+        return self.assertFailure(d, exceptions.MissingElementError)
 
 
 
