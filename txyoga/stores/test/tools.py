@@ -101,7 +101,7 @@ class StoreTestMixin(object):
         yield self.assertFailure(d, exceptions.MissingElementError)
 
 
-    def test_removeFromNonexistentCollection(self):
+    def test_removeFromUnknownCollection(self):
         newJar = collections.Jar()
         d = self.store.remove(newJar, cookie.name)
         return self.assertFailure(d, exceptions.UnknownCollectionError)
