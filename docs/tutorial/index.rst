@@ -36,7 +36,7 @@ users should run ``twistd`` manually.
 Using the helper script
 -----------------------
 
-From the ``doc`` directory::
+From the ``docs`` directory::
 
      ./serveTutorial start
 
@@ -69,4 +69,4 @@ List of examples
 .. toctree::
 
    accessing
-   createdelete
+   crud

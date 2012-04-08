@@ -1,4 +1,6 @@
 # -*- mode: python; coding: utf-8 -*-
+cache()
+
 from twisted.web.resource import IResource
 
 from txyoga import Collection, Element
@@ -10,7 +12,6 @@ class Employee(Element):
     """
     exposedAttributes = "name", "title"
     updatableAttributes = "salary", "title"
-    
 
     def __init__(self, name, title, salary):
         self.name = name
@@ -23,7 +24,7 @@ class Company(Collection):
     """
     A company.
     """
-    elementClass = Employee
+    defaultElementClass = Employee
     exposedElementAttributes = "name",
 
 
