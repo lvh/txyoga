@@ -73,18 +73,15 @@ class _BaseCollectionTest(object):
         self.resource = IResource(self.collection)
 
 
-    def addElements(self, elements=None):
+    def addElements(self):
         """
-        Adds some element to the collection.
+        Adds some elements to the collection.
 
-        If no elements are specified, create the default elements specified by
-        the elementClass and elementArgs class attributes.
+        Creates the default elements specified by the ``elementClass`` and
+        ``elementArgs`` class attributes.
         """
-        if elements is None:
-            elements = [self.elementClass(*a) for a in self.elementArgs]
-
-        for e in elements:
-            self.collection.add(e)
+        for element in [self.elementClass(*a) for a in self.elementArgs]:
+            self.collection.add(element)
 
 
     def _makeRequest(self, resource, request):
