@@ -1,0 +1,13 @@
+[run]
+branch = True
+source = txyoga
+omit =
+    txyoga/interface.py
+
+[report]
+omit =
+    txyoga/interface.py
+exclude_lines = 
+    pragma: no cover
+    def __repr__
+
