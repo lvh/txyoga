@@ -90,7 +90,8 @@ class StoreTestMixin(object):
     def test_remove(self):
         yield self.store.add(self.collection, cookie)
         yield self.store.remove(self.collection, cookie.name)
-
+        d = self.store.get(self.collection, cookie.name)
+        yield self.assertFailure(d, exceptions.MissingElementError)
 
     @defer.inlineCallbacks
     def test_removeTwice(self):
