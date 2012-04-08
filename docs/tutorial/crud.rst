@@ -28,7 +28,8 @@ attribute.
 
 Then there is the ``defaultElementClass`` attribute on the collection
 class. By default, this class will be instantiated when new elements
-are added. In this case, new elements will be ``Employee``s.
+are added. In this case, new elements will be instances of the
+``Employee`` class.
 
 Trying it out
 =============
