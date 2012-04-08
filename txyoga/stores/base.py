@@ -8,7 +8,6 @@ class StoreDescriptorMixin(object):
     A mixin for stores to implement the store descriptor behavior.
     """
     def __get__(self, collection, collectionClass):
-        import pdb; pdb.set_trace()
         if collection is not None:
             return _CollectionStore(self, collection)
         else:
@@ -28,3 +27,8 @@ class _CollectionStore(object):
     def __getattr__(self, name):
         method = getattr(self.store, name)
         return functools.partial(method, collection=self._collection)
+
+
+    def __repr__(self):
+        template = "<{0.__class__.__name__} ({0._store}, {0._collection})>"
+        return template.format(self)
