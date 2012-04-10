@@ -55,9 +55,13 @@ class StoreTestMixin(object):
             setattr(cls, test.__name__, decoratedTest)
 
 
+
+@StoreTestMixin.part
+class _StoreCRUDTests(object):
     def setUp(self):
         self.collection = collections.Jar()
         self.store = self.storeFactory()
+        return self.store.register(self.collection)
 
 
     @defer.inlineCallbacks
@@ -120,11 +124,18 @@ class StoreTestMixin(object):
 
 
 @StoreTestMixin.part
-class _StoreRangeQueryTestMixin(object):
+class _StoreRangeQueryTests(object):
+    @defer.inlineCallbacks
     def setUp(self):
-        self.collection = jar = collections.Jar()
-        cookies = (collections.Cookie(str(i)) for i in xrange(50))
-        return defer.gatherResults([self.store.add(jar, c) for c in cookies])
+        self.collection = collections.Jar()
+        self.store = self.storeFactory()
+        yield self.store.register(self.collection)
+
+        ds = []
+        for cookie in (collections.Cookie(str(i)) for i in xrange(50)):
+            ds.append(self.store.add(self.collection, cookie))
+
+        yield defer.gatherResults(ds)
 
 
     def _testRangeQuery(self, start, stop, expectedIdentifiers):

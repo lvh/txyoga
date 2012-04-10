@@ -4,14 +4,27 @@
 In-memory store.
 """
 import collections
+import functools
 from zope import interface as zi
 
 from twisted.internet import defer
 
-from txyoga.stores import interface as istore, exceptions
+from txyoga.stores import base, exceptions, interface as istore
 
 
-class MemoryStore(object):
+def _synchronous(f):
+    @functools.wraps(f)
+    def decorated(*a, **kw):
+        try:
+            return defer.succeed(f(*a, **kw))
+        except Exception as e:
+            return defer.fail(e)
+
+    return decorated
+
+
+
+class MemoryStore(base.StoreDescriptorMixin):
     """
     An in-memory store.
     """
@@ -21,48 +34,53 @@ class MemoryStore(object):
         self._records = {}
 
 
+    @_synchronous
+    def register(self, collection):
+        if collection not in self._records:
+            self._records[collection] = _CollectionRecord()
+        else:
+            raise RuntimeError("duplicate registration TODO: REMOVE")
+
+
+    def _getRecord(self, collection):
+        try:
+            return self._records[collection]
+        except KeyError:
+            raise exceptions.UnknownCollectionError(collection, self)
+
+
+    @_synchronous
     def get(self, collection, identifier):
         try:
-            element = self._records[collection][identifier]
-            return defer.succeed(element)
+            return self._getRecord(collection)[identifier]
         except KeyError:
-            return defer.fail(exceptions.MissingElementError(identifier))
+            raise exceptions.MissingElementError(identifier)
 
 
+    @_synchronous
     def query(self, collection, start=0, stop=None):
-        elements = self._records[collection][start:stop]
-        return defer.succeed(elements)
+        return self._getRecord(collection)[start:stop]
 
 
+    @_synchronous
     def add(self, collection, element):
-        try:
-            record = self._records[collection]
-        except KeyError:
-            record = _CollectionRecord()
-            self._records[collection] = record
+        record = self._getRecord(collection)
+        identifier = getattr(element, element.identifyingAttribute)
 
         try:
-            identifier = getattr(element, element.identifyingAttribute)
             record[identifier] = element
         except KeyError:
-            return defer.fail(exceptions.DuplicateElementError(identifier))
+            raise exceptions.DuplicateElementError(identifier)
 
-        return defer.succeed(None)
+        return None
 
  
+    @_synchronous
     def remove(self, collection, identifier):
         try:
-            record = self._records[collection]
+            del self._getRecord(collection)[identifier]
         except KeyError:
-            e = exceptions.UnknownCollectionError(collection, self)
-            return defer.fail(e)
-
-        try:
-            del record[identifier]
-        except KeyError:
-            return defer.fail(exceptions.MissingElementError(identifier))
-        else:
-            return defer.succeed(None)
+            raise exceptions.MissingElementError(identifier)
 
 
 
