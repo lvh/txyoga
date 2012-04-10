@@ -70,9 +70,14 @@ class StoreTestMixin(object):
 
 
     def test_getMissing(self):
-        identifier = getattr(cookie, cookie.identifyingAttribute)
-        d = self.store.get(self.collection, identifier)
+        d = self.store.get(self.collection, cookie.name)
         return self.assertFailure(d, exceptions.MissingElementError)
+
+
+    def test_getFromUnknownCollection(self):
+        newCollection = collections.Jar()
+        d = self.store.get(newCollection, cookie.name)
+        return self.assertFailure(d, exceptions.UnknownCollectionError)
 
 
     def test_add(self):
