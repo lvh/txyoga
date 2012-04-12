@@ -11,6 +11,18 @@ that don't specify any other kind of store.
 Interface
 =========
 
+Note that all jar methods return a deferred. However, because we're
+using an in-memory store, we know that the operations *actually* occur
+synchronously. In order to make the doctests easier to read, we create
+a function that swallows the deferred:
+
+.. doctest::
+
+    >>> def s(expr): pass
+
+Normally, you would use something like ``gatherResults`` to wait for
+all operations to be completed.
+
 Let's say that we have a cookie jar with an associated store.
 
 .. doctest::
@@ -21,7 +33,7 @@ Let's say that we have a cookie jar with an associated store.
     >>> class Jar(collections.Jar):
     ...     store = store
     >>> jar = Jar()
-    >>> _ = store.register(jar)
+    >>> s(store.register(jar))
 
 When you access a store on the collection class, you get that store:
 
@@ -52,7 +64,7 @@ Let's add some cookies to the jar.
     >>> cookieNames = "sugar", "chocolate chip", "shortbread"
     >>> cookies = [collections.Cookie(name) for name in cookieNames]
     >>> for cookie in cookies:
-    ...     _ = jar.store.add(cookie)
+    ...     s(jar.store.add(cookie))
 
 Note that the elements will only be available immediately because the
 in-memory store is synchronous. In general, stores might take a long
