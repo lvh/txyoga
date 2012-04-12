@@ -13,6 +13,9 @@ elements in collections works.
 Example code
 ============
 
+.. literalinclude:: crud.rpy
+   :language: python
+
 The example code is very similar, but not identical to that in the
 previous example.
 
