@@ -16,7 +16,6 @@ class Screwdriver(Element):
     exposedAttributes = "head", "size"
     identifyingAttribute = "size"
 
-
     def __init__(self, head, size):
         self.head = head
         self.size = size

@@ -17,6 +17,7 @@ Contents:
    :maxdepth: 2
 
    tutorial/index.rst
+   stores/index.rst
 
 Indices and tables
 ==================

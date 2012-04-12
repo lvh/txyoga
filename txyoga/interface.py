@@ -22,18 +22,6 @@ class ICollection(Interface):
         """
 
 
-    def add(element):
-        """
-        Adds an element to this collection.
-        """
-    
-    
-    def __getitem__(sliceOrIdentifier):
-        """
-        Gets a particular element by identifier or a slice of elements.
-        """
-
-
 
 ALL = object()
 
@@ -53,9 +41,7 @@ class IElement(Interface):
         """
         The attribtue used to define this element.
 
-        Must be unique among all elements in a particular collection. Doesn't
-        have to be exposed as well, but it probably doesn't make sense to do
-        that.
+        Must be unique among all other elements in any collection.
         """)
 
 
