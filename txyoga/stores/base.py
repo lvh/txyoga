@@ -3,6 +3,9 @@
 """
 Tools for building stores.
 """
+import functools
+
+
 class StoreDescriptorMixin(object):
     """
     A mixin for stores to implement the store descriptor behavior.
@@ -25,8 +28,8 @@ class _CollectionStore(object):
 
 
     def __getattr__(self, name):
-        method = getattr(self.store, name)
-        return functools.partial(method, collection=self._collection)
+        method = getattr(self._store, name)
+        return functools.partial(method, self._collection)
 
 
     def __repr__(self):
