@@ -1,6 +1,6 @@
-from setuptools import setup
+import setuptools
 
-setup(name='txyoga',
+setuptools.setup(name='txyoga',
       version='0',
       description='REST toolkit for Twisted',
       url='https://github.com/lvh/txyoga',
@@ -8,7 +8,7 @@ setup(name='txyoga',
       author='Laurens Van Houtven',
       author_email='_@lvh.cc',
 
-      packages=['txyoga'],
+      packages = setuptools.find_packages(),
 
       requires=['twisted'],
 
