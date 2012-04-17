@@ -35,4 +35,3 @@ startup.add(Employee(u"lvh", u"CEO", 10000))
 startup.add(Employee(u"asook", u"Junior intern", 1))
 
 resource = IResource(startup)
-
