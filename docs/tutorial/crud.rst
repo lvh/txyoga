@@ -61,7 +61,7 @@ or PUT, specifying the encoding is mandatory.
 
 .. doctest::
 
-   >>> data = {"name": u"alice"}
+   >>> data = {"name": u"alice", "salary": 100, "title": "engineer"}
    >>> headers = {"content-type": "application/json"}
    >>> response = example.put(json.dumps(data), headers, "alice")
 
@@ -70,27 +70,32 @@ As usual, we get the appropriate response:
 .. doctest::
 
    >>> response.status, response.reason
+   (201, 'Created')
+
+If accepted but not yet created, a txyoga server may optionally return
+202 (Accepted).
 
 Updating an element
 -------------------
 
-Now that the company's grown, lvh really deserves a raise. To do this,
-we update his record. In REST, updates are typically done using a PUT
-request.
+The company's success has really gotten to lvh's head. He's not happy
+unless we give him a ridiculius new title.
+
+To do that, we update his record. In REST, updates are typically done
+using a PUT request.
 
 .. doctest::
 
-   >>> def getSalary():
-   ...     return json.loads(example.get("lvh"))["salary"]
-   >>> getSalary()
-   1
+   >>> def getTitle(employee="lvh"):
+   ...     response = example.get(employee)
+   ...     return json.load(response)["title"]
+   >>> assert getTitle() == u'CEO'
    >>> headers = {"content-type": "application/json"}
-   >>> data = {"salary": 1000}
+   >>> data = {"title": u"Supreme Commander"}
    >>> response = example.put(json.dumps(data), headers, "lvh")
    >>> response.status, response.reason
    (200, 'OK')
-   >>> getSalary()
-   1
+   >>> assert getTitle() == u'Supreme Commander'
 
 Deleting an element
 -------------------
