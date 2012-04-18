@@ -6,7 +6,7 @@ Test basic collection functionality.
 from twisted.trial.unittest import TestCase
 from twisted.web.resource import IResource
 
-from txyoga import base
+from txyoga import base, errors
 from txyoga.interface import ICollection
 from txyoga.test import collections
 
@@ -33,8 +33,11 @@ class CollectionTest(TestCase):
         element = base.Element()
         element.name = "Unobtainium"
 
-        collection.add(element)
-        self.assertRaises(ValueError, collection.add, element)
+        def add():
+            collection.add(element)
+
+        add()
+        self.assertRaises(errors.DuplicateElementError, add)
 
 
 
@@ -64,8 +67,8 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
         """
         Verify that the response doesn't have a previous or a next page.
         """
-        self.assertIdentical(self.responseContent["next"], None)
-        self.assertIdentical(self.responseContent["prev"], None)
+        for link in ["next", "prev"]:
+            self.assertIdentical(self.responseContent[link], None)
 
 
     def test_getElements_none(self):

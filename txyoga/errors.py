@@ -97,11 +97,18 @@ class PaginationError(SerializableError):
 
 
 
-class MissingResourceError(SerializableError):
+class MissingElementError(SerializableError):
     """
-    Raised when attempting to access a resource that does not exist.
+    Raised when an element that was expected to exist didn't.
+
+    This could be raised when attempting to remove or get an element.
     """
     responseCode = http.NOT_FOUND
+
+    def __init__(self, identifier):
+        message = "missing element"
+        details = {"identifier": identifier}
+        SerializableError.__init__(self, message, details)
 
 
 
@@ -138,4 +145,18 @@ class IdentifierError(SerializableError):
         message = "new element did not have specified identifying attribute"
         details = {"actualIdentifyingAttribute": repr(actual),
                    "expectedIdentifyingAttribute": repr(expected)}
+        SerializableError.__init__(self, message, details)
+
+
+
+class DuplicateElementError(SerializableError):
+    """
+    Raised when an element is added to a collection that already has an
+    element with that identifier.
+    """
+    responseCode = http.FORBIDDEN
+
+    def __init__(self, identifier):
+        message = "duplicate element"
+        details = {"identifier": identifier}
         SerializableError.__init__(self, message, details)

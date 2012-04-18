@@ -22,6 +22,38 @@ class ICollection(Interface):
         """
 
 
+    def get(collection, identifier):
+        """
+        Get the element with this identifier from the collection.
+
+        Returns a ``Deferred`` that fires with the requested element.
+        """
+
+
+    def query(**kwargs):
+        """
+        Gets the elements in the collection that match a query.
+
+        Returns a ``Deferred`` that fires with the requested elements.
+        """
+
+
+    def add(element):
+        """
+        Adds the element to the collection.
+
+        Returns a ``Deferred`` that fires when the element has been added.
+        """
+
+
+    def remove(identifier):
+        """
+        Remove the element with a given identifier from the collection.
+
+        Returns a ``Deferred`` that fires when the element has been removed.
+        """
+
+
 
 ALL = object()
 
@@ -41,19 +73,23 @@ class IElement(Interface):
         """
         The attribtue used to define this element.
 
-        Must be unique among all other elements in any collection.
+        The value of this attribute must be unique in the collection.
         """)
 
 
     def toState(attrs=ALL):
         """
-        Exports a serializable state of this object.
+        Export the state of this object.
+
+        Returns a ``Deferred`` that will fire with the state of this object.
         """
     
 
     def fromState(state):
         """
-        Creates a new object with the given state as the new internal state.
+        Creates a new object from the given state.
+
+        Returns a `Deferred` that will fire with the new element.
         """
 
 

@@ -5,6 +5,7 @@ Tests for basic class serialization and deserialization.
 """
 from twisted.trial.unittest import TestCase
 
+from txyoga import errors
 from txyoga.base import Collection, Element
 from txyoga.serializers import jsonEncode
 
@@ -84,10 +85,6 @@ class ElementCreationTest(TestCase):
 
         for attr, value in state.iteritems():
             self.assertEqual(getattr(screwdriver, attr), value)
-
-        toolbox.add(screwdriver)
-        self.assertEqual(toolbox[screwdriver.size], screwdriver)
-        self.assertRaises(ValueError, toolbox.add, screwdriver)
 
 
 

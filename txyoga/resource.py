@@ -62,7 +62,7 @@ class CollectionResource(EncodingResource):
         """
         try:
             if request.method == "DELETE" and not request.postpath:
-                self._collection.removeByIdentifier(path)
+                self._collection.remove(path)
                 return Deleted()
 
             return IResource(self._collection[path])
@@ -97,11 +97,11 @@ class CollectionResource(EncodingResource):
 
     
     @reportErrors
-    def _missingElement(self, request, element):
+    def _missingElement(self, request, identifier):
         """
         Reports client about a missing element.
         """
-        raise errors.MissingResourceError("no such element %s" % (element,))
+        raise errors.MissingElementError(identifier)
 
 
     @reportErrors

@@ -22,9 +22,6 @@ class Element(object):
 
 
     def toState(self, attrs=interface.ALL):
-        """
-        Returns the state of this object in a serializable form.
-        """
         if attrs is interface.ALL:
             attrs = self.exposedAttributes
 
@@ -103,13 +100,13 @@ class Collection(object):
         identifier = getattr(element, element.identifyingAttribute)
 
         if identifier in self._elementsByIdentifier:
-            raise ValueError("duplicate element (%s)" % (identifier,))
+            raise errors.DuplicateElementError(identifier)
 
         self._elementsByIdentifier[identifier] = element
         self._elements.append(element)
 
 
-    def removeByIdentifier(self, identifier):
+    def remove(self, identifier):
         element = self._elementsByIdentifier.pop(identifier)
         self._elements.remove(element)
 
