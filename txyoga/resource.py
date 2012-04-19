@@ -6,14 +6,13 @@ Resources providing the REST API to some objects.
 from urllib import urlencode
 from urlparse import urlsplit, urlunsplit
 
-from twisted.web.resource import IResource, Resource
-from twisted.web import http
+from twisted.web import http, resource
 
 from txyoga import errors, interface
 from txyoga.serializers import EncodingResource, reportErrors
 
 
-class Created(Resource):
+class Created(resource.Resource):
     """
     A resource returned when an element has been successfully created.
     """
@@ -23,7 +22,7 @@ class Created(Resource):
 
 
 
-class Deleted(Resource):
+class Deleted(resource.Resource):
     """
     A resource returned when an element has been successfully deleted.
     """
@@ -38,7 +37,7 @@ class CollectionResource(EncodingResource):
     A resource representing a REST collection.
     """
     def __init__(self, collection):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
         self._collection = collection
 
 
@@ -65,7 +64,7 @@ class CollectionResource(EncodingResource):
                 self._collection.remove(path)
                 return Deleted()
 
-            return IResource(self._collection[path])
+            return resource.IResource(self._collection[path])
         except KeyError:
             if request.method == 'PUT' and not request.postpath:
                 return self._createElement(request, identifier=path)
@@ -198,13 +197,13 @@ class ElementResource(EncodingResource):
     A resource representing an element in a collection.
     """
     def __init__(self, element):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
 
         self._element = element
 
         for childName in element.children:
             child = getattr(element, childName)
-            self.putChild(childName, IResource(child))
+            self.putChild(childName, resource.IResource(child))
 
 
     @reportErrors
