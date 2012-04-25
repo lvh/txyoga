@@ -33,11 +33,11 @@ class Deleted(resource.Resource):
         return ""
 
 
-
 def deferredRenderWithErrorReporting(method):
     def decorated(self, request):
         d = defer.maybeDeferred(method, self, request)
         d.addErrback(_reportError, request, self.defaultEncoder)
+        d.addCallback(_finish, request)
         return server.NOT_DONE_YET
 
     return decorated
@@ -45,15 +45,25 @@ def deferredRenderWithErrorReporting(method):
 
 def _reportError(reason, request, defaultEncoder):
     if not interface.ISerializableError.providedBy(reason.value):
-        request.write(repr(reason.value))
-        request.finish()
+        log.err(reason)
         return
 
     request.encoder = getattr(request, "encoder", defaultEncoder)
     resource = errors.RESTErrorPage(reason.value)
-    request.write(resource.render(request))
-    request.finish()
+    return resource.render(request)
+
+
+def _finish(body, request):
+    if body is server.NOT_DONE_YET:
+        return body
     
+    request.write(body)
+    request.finish()
+
+
+def _renderResource(resource, request):
+    return resource.render(request)
+
 
 
 class DeferredResource(object):
@@ -73,14 +83,9 @@ class DeferredResource(object):
 
     @deferredRenderWithErrorReporting
     def render(self, request):
-        return self.deferred.addCallback(self._delayedRender, request)
-
-
-    def _delayedRender(self, resource, request):
-        body = resource.render(request)
-        if body is not server.NOT_DONE_YET:
-            request.write(body)
-            request.finish()
+        self.deferred.addCallback(_renderResource, request)
+        self.deferred.addCallback(_finish, request)
+        return self.deferred
 
 
     @classmethod
@@ -152,9 +157,7 @@ class CollectionResource(serializers.EncodingResource):
                 e = errors.IdentifierError(identifier, actualIdentifier)
                 return defer.fail(e)
 
-        d = self._collection.add(element)
-        d.addCallback(lambda _: Created())
-        return d
+        return self._collection.add(element).addCallback(lambda _: Created())
 
 
     @deferredRenderWithErrorReporting
@@ -163,13 +166,7 @@ class CollectionResource(serializers.EncodingResource):
         Creates a new element in the collection.
         """
         d = self._createElement(request)
-
-        @d.addCallback
-        def finish(resource):
-            request.write(resource.render(request))
-            request.finish()
-
-        return d
+        d.addCallback(_renderResource, request)
 
 
     @deferredRenderWithErrorReporting
@@ -292,10 +289,4 @@ class ElementResource(serializers.EncodingResource):
         """
         Updates the element.
         """
-        state = request.decoder(request.content)
-        d = self._element.update(state)
-        @d.addCallback
-        def finish(_):
-            request.write("")
-            request.finish()
-        return d
+        return self._element.update(request.decoder(request.content))
