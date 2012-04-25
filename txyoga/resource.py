@@ -55,8 +55,8 @@ def _reportError(reason, request, defaultEncoder):
 
 def _finish(body, request):
     if body is server.NOT_DONE_YET:
-        return body
-    
+        return
+
     request.write(body)
     request.finish()
 
