@@ -3,8 +3,7 @@
 """
 Test collection pagination.
 """
-from math import ceil
-from urlparse import urlsplit, parse_qsl
+import urlparse
 
 from twisted.trial.unittest import TestCase
 
@@ -66,7 +65,8 @@ class PaginationTest(collections.PaginatedCollectionMixin, TestCase):
             Gets the args for getting the next page.
             """
             nextURL = self.responseContent["next"]
-            nextQuery = parse_qsl(urlsplit(nextURL).query)
+            rawQuery = urlparse.urlsplit(nextURL).query
+            nextQuery = urlparse.parse_qsl(rawQuery)
 
             nextQueryKeys = [key for key, _ in nextQuery]
             for key in ("start", "stop"):

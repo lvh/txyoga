@@ -5,7 +5,6 @@ Tests for basic class serialization and deserialization.
 """
 from twisted.trial.unittest import TestCase
 
-from txyoga import errors
 from txyoga.base import Collection, Element
 from txyoga.serializers import jsonEncode
 

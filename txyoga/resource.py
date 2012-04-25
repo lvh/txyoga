@@ -179,7 +179,7 @@ class CollectionResource(serializers.EncodingResource):
         time. Each page will have links to the previous and next
         pages.
         """
-        encoder = request.encoder = self._getEncoder(request)
+        request.encoder = self._getEncoder(request)
 
         start, stop = self._getBounds(request)
         url = request.prePathURL()
