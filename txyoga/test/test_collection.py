@@ -3,6 +3,7 @@
 """
 Test basic collection functionality.
 """
+from twisted.internet import defer
 from twisted.trial.unittest import TestCase
 from twisted.web.resource import IResource
 
@@ -50,8 +51,12 @@ class ElementChildTest(collections.ElementChildMixin, TestCase):
         Tests that a child can be accessed.
         """
         self.addElements()
-        self.getElementChild("oceania", "ministries")
+        d = self.getElementChild("oceania", "ministries")
+        d.addCallback(self._verifyChild)
+        return d
 
+
+    def _verifyChild(self, _):
         results = self.responseContent["results"]
         expectedResults = [{"name": name} for name in collections.ministryNames]
         self.assertEqual(results, expectedResults)
@@ -63,6 +68,21 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
     Test some generic invariants for collections small enough to fit
     in a single page.
     """
+    def _verifyElementCount(self, expected):
+        results = self.responseContent["results"]
+        self.assertEqual(len(results), expected)
+
+        self._checkPaginationLinks()
+        
+
+    def _verifyEmpty(self, _):
+        self._verifyElementCount(0)
+
+
+    def _verifyFull(self, _):
+        self._verifyElementCount(len(self.elementArgs))
+
+
     def _checkPaginationLinks(self):
         """
         Verify that the response doesn't have a previous or a next page.
@@ -71,33 +91,23 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
             self.assertIdentical(self.responseContent[link], None)
 
 
-    def test_getElements_none(self):
+    def test_getEmptyCollection(self):
         """
         Tests that an empty collection reports no elements.
         """
-        self.getElements()
-
-        results = self.responseContent["results"]
-        self.assertEqual(len(results), 0)
-
-        self._checkPaginationLinks()
+        return self.getElements().addCallback(self._verifyEmpty)
 
 
-    def test_getElements_many(self):
+    def test_getFullCollection(self):
         """
         Test on a collection with more than one element, but not enough of
         them to incur the wrath of the pagination monster.
         """
         self.addElements()
-        self.getElements()
-
-        results = self.responseContent["results"]
-        self.assertEqual(len(results), len(self.elementArgs))
-
-        self._checkPaginationLinks()
+        return self.getElements().addCallback(self._verifyFull)
 
 
-    def test_getElements_variable(self):
+    def test_getVariableCollection(self):
         """
         Test on a collection with varying content.
 
@@ -106,20 +116,15 @@ class UnpaginatedCollectionTest(collections.SimpleCollectionMixin, TestCase):
         """
         oldResource = self.resource
 
-        self.getElements()
-        results = self.responseContent["results"]
-        self.assertEqual(len(results), 0)
+        def _verifySameResource(_):
+            self.assertEqual(self.resource, oldResource)
 
-        self._checkPaginationLinks()
-        self.assertEqual(self.resource, oldResource)
+        d = self.test_getEmptyCollection()
+        d.addCallback(_verifySameResource)
+        d.addCallback(lambda _: self.test_getFullCollection())
+        d.addCallback(_verifySameResource)
 
-        self.addElements()
-        self.getElements()
-        results = self.responseContent["results"]
-        self.assertEqual(len(results), len(self.elementArgs))
-
-        self._checkPaginationLinks()
-        self.assertEqual(self.resource, oldResource)
+        return d
 
 
 
@@ -136,7 +141,13 @@ class PartialExposureTest(collections.PartialExposureMixin, TestCase):
         attributes.
         """
         self.addElements()
-        self.getElements()
+        d = self.getElements()
+        d.addCallback(self._verifyExposedElementAttributes)
+        d.addCallback(self._verifyExposedAttributes)
+        return d
+
+
+    def _verifyExposedElementAttributes(self, _):
         results = self.responseContent["results"]
         for result in results:
             for attribute in self.elementClass.exposedAttributes:
@@ -145,7 +156,22 @@ class PartialExposureTest(collections.PartialExposureMixin, TestCase):
                 else:
                     self.assertNotIn(attribute, result)
 
-            self.getElement(result["name"])
 
+    def _verifyExposedAttributes(self, _):
+        # Yes, this has to be synchronous (one by one), because
+        # getElement tacks a lot of ugly state on to the test case. It
+        # really should return a nice (deferred) response object...
+        # See issue #33
+        def verifyElementExposure(_):
             for attribute in self.elementClass.exposedAttributes:
                 self.assertIn(attribute, self.responseContent)
+
+        d = defer.Deferred()
+
+        names = [r["name"] for r in self.responseContent["results"]]
+        for name in names:
+            d.addCallback(lambda _: self.getElement(name))
+            d.addCallback(verifyElementExposure)
+
+        d.callback(None)
+        return d

@@ -4,13 +4,15 @@ Generic utilities for testing txyoga.
 from functools import partial
 from StringIO import StringIO
 
-from twisted.web import http, http_headers
-from twisted.web.resource import IResource
+from twisted.internet import defer
+from twisted.web import http, http_headers, resource, server
 
 from txyoga.serializers import json
 
 
 BASE_URL = "http://localhost"
+correctAcceptHeaders = http_headers.Headers()
+correctAcceptHeaders.setRawHeaders("Accept", ["application/json"])
 
 
 
@@ -18,14 +20,12 @@ class _FakeRequest(object):
     """
     Mimics a twisted.web.server.Request, poorly.
     """
-    def __init__(self, args=None, body=None, method="GET",
+    def __init__(self, args=None, body="", method="GET",
                  prePathURL=BASE_URL, requestHeaders=None):
-        self.args = args if args is not None else {}
+        self.args = args or {}
 
-        if body is not None:
-            self.content = StringIO(body)
-        else:
-            self.content = StringIO('')
+        self.content = StringIO(body)
+        self._responseContent = StringIO()
 
         self.prePathURL = lambda: prePathURL
         # we're always directly aimed at a resource and nobody is doing any
@@ -34,12 +34,32 @@ class _FakeRequest(object):
 
         self.code = http.OK
 
-        if requestHeaders is not None:
-            self.requestHeaders = requestHeaders
-        else:
-            self.requestHeaders = http_headers.Headers()
+        self.requestHeaders = requestHeaders or http_headers.Headers()
         self.responseHeaders = http_headers.Headers()
         self.method = method
+
+        self._finished = False
+        self._notifiers = []
+
+
+    def write(self, part):
+        self._responseContent.write(part)
+
+
+    def finish(self):
+        self._finished = True
+        self._responseContent.seek(0, 0)
+        for d in self._notifiers:
+            d.callback(None)
+
+
+    def notifyFinish(self):
+        if self._finished:
+            return defer.succeed(None)
+        else:
+            d = defer.Deferred()
+            self._notifiers.append(d)
+            return d
 
 
     def setResponseCode(self, code):
@@ -70,7 +90,7 @@ class _BaseCollectionTest(object):
     """
     def setUp(self):
         self.collection = self.collectionClass()
-        self.resource = IResource(self.collection)
+        self.resource = resource.IResource(self.collection)
 
 
     def addElements(self):
@@ -89,14 +109,20 @@ class _BaseCollectionTest(object):
         Makes a request to a particular resource.
         """
         self.request = request
-        self.response = resource.render(request)
+
+        result = resource.render(request)
+        if result is not server.NOT_DONE_YET:
+            request.write(result)
+            request.finish()
+
+        return request.notifyFinish()
 
 
     def _decodeResponse(self):
         """
         Tries to decode the body of a response.
         """
-        self.responseContent = json.loads(self.response)
+        self.responseContent = json.load(self.request._responseContent)
 
 
     def _checkContentType(self, expectedContentType="application/json"):
@@ -128,36 +154,42 @@ class _BaseCollectionTest(object):
         """
         Generalized GET for a particular resource.
         """
+        headers = headers or correctAcceptHeaders
         request = _FakeRequest(args=args, requestHeaders=headers)
 
         resource = self.resource
         for childName in path:
             resource = resource.getChildWithDefault(childName, request)
 
-        self._makeRequest(resource, request)
-        self._checkContentType()
-        self._decodeResponse()
+        d = self._makeRequest(resource, request)
+
+        @d.addCallback
+        def verify(_):
+            self._checkContentType()
+            self._decodeResponse()
+
+        return d
 
 
     def getElements(self, args=None, headers=None):
         """
         Gets a bunch of elements from a collection.
         """
-        self._getResource(args, headers)
+        return self._getResource(args, headers)
 
 
     def getElement(self, element, args=None, headers=None):
         """
         Gets a particular element from a collection.
         """
-        self._getResource(args, headers, [element])
+        return self._getResource(args, headers, [element])
 
 
     def getElementChild(self, element, child, args=None, headers=None):
         """
         Gets a child of a particular element from a collection.
         """
-        self._getResource(args, headers, [element, child])
+        return self._getResource(args, headers, [element, child])
 
 
     def updateElement(self, name, body, headers=None):
@@ -168,7 +200,7 @@ class _BaseCollectionTest(object):
         """
         request = _FakePUTRequest(body=body, requestHeaders=headers)
         elementResource = self.resource.getChild(name, request)
-        self._makeRequest(elementResource, request)
+        return self._makeRequest(elementResource, request)
 
 
     def deleteElement(self, name):
@@ -177,7 +209,7 @@ class _BaseCollectionTest(object):
         """
         request = _FakeDELETERequest()
         elementResource = self.resource.getChild(name, request)
-        self._makeRequest(elementResource, request)
+        return self._makeRequest(elementResource, request)
 
 
     def createElement(self, name, body, headers=None, method="PUT"):
@@ -185,7 +217,7 @@ class _BaseCollectionTest(object):
         Create a new element.
         """
         if method == "PUT":
-            self.updateElement(name, body, headers)
+            return self.updateElement(name, body, headers)
         elif method == "POST":
             request = _FakePOSTRequest(body=body, requestHeaders=headers)
-            self._makeRequest(self.resource, request)
+            return self._makeRequest(self.resource, request)

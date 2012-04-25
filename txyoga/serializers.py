@@ -3,8 +3,7 @@
 """
 Serialization support.
 """
-from functools import wraps
-from inspect import getargspec
+import functools
 try: # pragma: no cover
     import simplejson as json
 except ImportError:# pragma: no cover
@@ -15,15 +14,31 @@ from twisted.web.resource import Resource
 from txyoga import errors, interface
 
 
+def forContentType(contentType):
+    def decorator(encoder):
+        encoder.contentType = contentType
+        return encoder
+    return decorator
+
+
+@forContentType("application/json")
+def jsonDecode(state):
+    """
+    Decodes an object from JSON.
+    """
+    return json.load(state)
+
+
+@forContentType("application/json")
 def jsonEncode(obj):
     """
-    Encodes an object to JSON using the ``RESTResourceJSONEncoder``.
+    Encodes an object to JSON using the ``_RESTResourceJSONEncoder``.
     """
-    return json.dumps(obj, cls=RESTResourceJSONEncoder)
+    return json.dumps(obj, cls=_RESTResourceJSONEncoder)
 
 
 
-class RESTResourceJSONEncoder(json.JSONEncoder):
+class _RESTResourceJSONEncoder(json.JSONEncoder):
     """
     A JSON encoder for REST resources.
 
@@ -41,65 +56,69 @@ class EncodingResource(Resource):
     """
     A resource that understands content types.
     """
-    encoders = {"application/json": jsonEncode}
-    decoders = {"application/json": json.load}
-    defaultContentType = "application/json"
+    defaultEncoder = staticmethod(jsonEncode)
+    encoders = [jsonEncode]
+    decoders = [jsonDecode]
 
 
     def _getEncoder(self, request):
-        accept = request.getHeader("Accept") or self.defaultContentType
+        accept = request.getHeader("Accept")
+
+        if accept is None:
+            self._unacceptable()
+
         parsed = _parseAccept(accept)
         accepted = [contentType.lower() for contentType, _ in parsed]
 
         for contentType in accepted:
-            try:
-                encoder = self.encoders[contentType]
-                request.setHeader("Content-Type", contentType)
-                return encoder, contentType
-            except KeyError:
-                continue
+            for encoder in self.encoders:
+                if encoder.contentType == contentType:
+                    request.setHeader("Content-Type", encoder.contentType)
+                    return encoder
 
-        raise errors.UnacceptableRequest(self.encoders.keys(), accepted)
+        self._unacceptable(accepted)
+
+
+    def _unacceptable(self, accepted=None):
+        supported = [encoder.contentType for encoder in self.encoders]
+        raise errors.UnacceptableRequest(supported, accepted)
 
 
     def _getDecoder(self, request):
         contentType = request.getHeader("Content-Type")
         if contentType is None:
-            supportedTypes = self.decoders.keys()
-            raise errors.MissingContentType(supportedTypes)
+            supported = [decoder.contentType for decoder in self.decoders]
+            raise errors.MissingContentType(supported)
 
-        try:
-            decoder = self.decoders[contentType]
-            return decoder, contentType
-        except KeyError:
-            supportedTypes = self.decoders.keys()
-            raise errors.UnsupportedContentType(supportedTypes, contentType)
+        for decoder in self.decoders:
+            if decoder.contentType == contentType:
+                return decoder
+
+        supported = [decoder.contentType for decoder in self.decoders]
+        raise errors.UnsupportedContentType(supported, contentType)
 
 
 
-def reportErrors(m):
-    arguments = getargspec(m).args
-    renders = "render" in m.__name__
+def withEncoder(m):
+    """
+    Tacks the appropriate encoder on to a decorated method's request.
+    """
+    @functools.wraps(m)
+    def decorated(self, request, *args, **kwargs):
+        request.encoder = self._getEncoder(request)
+        return m(self, request, *args, **kwargs)
+    return decorated
 
-    @wraps(m)
-    def wrapper(self, request, *args, **kwargs):
-        try:
-            contentType = self.defaultContentType
-            encoder = self.encoders[contentType]
 
-            if "encoder" in arguments:
-                encoder, contentType = self._getEncoder(request)
-                kwargs["encoder"] = encoder
-            elif "decoder" in arguments:
-                decoder, _ = self._getDecoder(request)
-                kwargs["decoder"] = decoder
-
-            return m(self, request, *args, **kwargs)
-        except errors.SerializableError, e:
-            errorResource = errors.RESTErrorPage(e, encoder, contentType)
-            return errorResource.render(request) if renders else errorResource
-
-    return wrapper
+def withDecoder(m):
+    """
+    Tacks the appropriate decoder on to a decorated method's request.
+    """
+    @functools.wraps(m)
+    def decorated(self, request, *args, **kwargs):
+        request.decoder = self._getDecoder(request)
+        return m(self, request, *args, **kwargs)
+    return decorated
 
 
 def _parseAccept(header):

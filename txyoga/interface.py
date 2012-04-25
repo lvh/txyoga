@@ -22,7 +22,7 @@ class ICollection(Interface):
         """
 
 
-    def get(collection, identifier):
+    def get(identifier):
         """
         Get the element with this identifier from the collection.
 

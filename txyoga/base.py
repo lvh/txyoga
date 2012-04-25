@@ -3,8 +3,10 @@
 """
 Base classes for objects that will be exposed through a REST API.
 """
+import inspect
 from functools import partial
 
+from twisted.internet import defer
 from zope.interface import implements
 
 from txyoga import errors, interface
@@ -42,7 +44,24 @@ class Element(object):
         """
         Constructs a new object from this state.
         """
-        return cls(**state)
+        originalState = state.copy()
+
+        try:
+            initArgs = {}
+            for arg in inspect.getargspec(cls.__init__).args[1:]:
+                initArgs[arg] = state.pop(arg)
+        except KeyError:
+            raise errors.ElementStateMissingAttributeError(originalState, arg)
+
+        try:
+            element = cls(**initArgs)
+        except TypeError:
+            raise errors.InvalidElementStateError(state)
+
+        for remaining, value in state.iteritems():
+            assert getattr(element, remaining) == value
+
+        return element
 
 
     def update(self, state):
@@ -68,12 +87,14 @@ class Element(object):
             UpdateError = partial(errors.AttributeValueUpdateError,
                                   attribute=attr, newValue=new)
             if attr in self.exposedAttributes:
-                raise UpdateError(currentValue=current)
+                return defer.fail(UpdateError(currentValue=current))
             else: # Don't expose the current value by accident
-                raise UpdateError()
+                return defer.fail(UpdateError())
     
         for attr in toUpdate:
             setattr(self, attr, state[attr])
+
+        return defer.succeed(None)
 
 
 
@@ -96,6 +117,17 @@ class Collection(object):
         return self.defaultElementClass.fromState(state)
 
 
+    def get(self, identifier):
+        try:
+            return defer.succeed(self._elementsByIdentifier[identifier])
+        except KeyError:
+            return defer.fail(errors.MissingElementError(identifier))
+
+
+    def query(self, start, stop):
+        return defer.succeed(self._elements[start:stop])
+
+
     def add(self, element):
         identifier = getattr(element, element.identifyingAttribute)
 
@@ -105,14 +137,13 @@ class Collection(object):
         self._elementsByIdentifier[identifier] = element
         self._elements.append(element)
 
+        return defer.succeed(element)
+
 
     def remove(self, identifier):
-        element = self._elementsByIdentifier.pop(identifier)
-        self._elements.remove(element)
-
-
-    def __getitem__(self, sliceOrIdentifier):
-        if isinstance(sliceOrIdentifier, slice):
-            return self._elements[sliceOrIdentifier]
-
-        return self._elementsByIdentifier[sliceOrIdentifier]
+        try:
+            element = self._elementsByIdentifier.pop(identifier)
+            self._elements.remove(element)
+            return defer.succeed(element)
+        except KeyError:
+            return defer.fail(errors.MissingElementError(identifier))

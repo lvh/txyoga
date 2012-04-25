@@ -153,13 +153,6 @@ class ElementChildMixin(_BaseCollectionTest):
 
 
 
-class SoftwareProject(base.Collection):
-    """
-    A software project that consists of a bunch of bikesheds.
-    """
-
-
-
 class Bikeshed(base.Element):
     """
     A bikeshed.
@@ -174,6 +167,14 @@ class Bikeshed(base.Element):
         self.name = name
         self.color = color
         self.maximumOccupancy = 100
+
+
+
+class SoftwareProject(base.Collection):
+    """
+    A software project that consists of a bunch of bikesheds.
+    """
+    defaultElementClass = Bikeshed
 
 
 

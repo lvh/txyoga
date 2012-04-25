@@ -22,29 +22,41 @@ class ElementCreationTest(collections.ElementCreationMixin):
 
     def createTestElement(self):
         name, body = self.newElementName, self.requestBody
-        self.createElement(name, body, self.headers, self.method)
+        return self.createElement(name, body, self.headers, self.method)
 
 
     def getTestElement(self):
-        self.getElement(self.newElementName)
+        return self.getElement(self.newElementName)
 
 
     def _test_createElement(self, expectedStatusCode=http.CREATED):
-        self.createTestElement()
+        d = self.createTestElement()
 
         if expectedStatusCode is http.CREATED:
-            self.assertEqual(self.request.code, expectedStatusCode)
-            self._checkContentType(None)
-
-            self.getTestElement()
-            self.assertEqual(self.request.code, http.OK)
-            self._checkContentType("application/json")
-            self._decodeResponse()
-            self.assertEqual(self.responseContent, self.newElementState)
+            d.addCallback(self._assertCreated)
         else: 
-            self._checkContentType("application/json")
-            self._decodeResponse()
-            self._checkBadRequest(expectedStatusCode)
+            d.addCallback(self._assertErrored, expectedStatusCode)
+
+        return d
+
+
+    def _assertCreated(self, _):
+        self.assertEqual(self.request.code, http.CREATED)
+        self._checkContentType(None)
+
+        d = self.getTestElement()
+        d.addCallback(self._assertNewElementAccessible)
+        return d
+
+
+    def _assertNewElementAccessible(self, _):
+        self.assertEqual(self.request.code, http.OK)
+        self.assertEqual(self.responseContent, self.newElementState)
+
+    
+    def _assertErrored(self, _, expectedStatusCode):
+        self._decodeResponse()
+        self._checkBadRequest(expectedStatusCode)
 
 
     def test_simple(self):
@@ -52,7 +64,7 @@ class ElementCreationTest(collections.ElementCreationMixin):
         Tests that creating an element works.
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
-        self._test_createElement(http.CREATED)
+        return self._test_createElement(http.CREATED)
 
 
     def test_missingContentType(self):
@@ -60,7 +72,7 @@ class ElementCreationTest(collections.ElementCreationMixin):
         Tests that creating an element when not specifying the content
         type fails.
         """
-        self._test_createElement(http.UNSUPPORTED_MEDIA_TYPE)
+        return self._test_createElement(http.UNSUPPORTED_MEDIA_TYPE)
 
 
     def test_badContentType(self):
@@ -69,7 +81,7 @@ class ElementCreationTest(collections.ElementCreationMixin):
         type fails.
         """
         self.headers.setRawHeaders("Content-Type", ["ZALGO/ZALGO"])
-        self._test_createElement(http.UNSUPPORTED_MEDIA_TYPE)
+        return self._test_createElement(http.UNSUPPORTED_MEDIA_TYPE)
 
 
 

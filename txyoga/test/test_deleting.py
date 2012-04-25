@@ -18,7 +18,7 @@ class ElementDeletionTest(collections.SimpleCollectionMixin, TestCase):
         self.addElements()
 
 
-    def _checkSuccessfulDeletion(self):
+    def _checkSuccessfulDeletion(self, _):
         """
         Test that deleting an element succeeded.
         """
@@ -26,7 +26,7 @@ class ElementDeletionTest(collections.SimpleCollectionMixin, TestCase):
         self._checkContentType(None)
 
 
-    def _checkFailedDeletion(self):
+    def _checkFailedDeletion(self, _):
         """
         Test that deleting an element failed as expected.
         """
@@ -41,24 +41,27 @@ class ElementDeletionTest(collections.SimpleCollectionMixin, TestCase):
         Delete an element, check response.
         """
         name = self.elementArgs[0][0]
-        self.deleteElement(name)
-        self._checkSuccessfulDeletion()
+        d = self.deleteElement(name)
+        d.addCallback(self._checkSuccessfulDeletion)
+        return d
 
 
-    def test_deleteElement_missing(self):
+    def test_deleteMissingElement(self):
         """
         Delete an element that doesn't exist, check response.
         """
-        self.deleteElement("bogus")
-        self._checkFailedDeletion()
+        d = self.deleteElement("bogus")
+        d.addCallback(self._checkFailedDeletion)
+        return d
 
 
-    def test_deleteElement_twice(self):
+    def test_deleteElementTwice(self):
         """
         Delete an element, check response, delete it again, check response.
         """
         name = self.elementArgs[0][0]
-        self.deleteElement(name)
-        self._checkSuccessfulDeletion()
-        self.deleteElement(name)
-        self._checkFailedDeletion()
+        d = self.deleteElement(name)
+        d.addCallback(self._checkSuccessfulDeletion)
+        d.addCallback(lambda _: self.deleteElement(name))
+        d.addCallback(self._checkFailedDeletion)
+        return d

@@ -3,6 +3,7 @@
 """
 Test updating elements in collections.
 """
+from twisted.internet import defer
 from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers
 
@@ -24,9 +25,9 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
     """
     def setUp(self):
         collections.UpdatableCollectionMixin.setUp(self)
-        self.addElements()
         self.headers = http_headers.Headers()
         self.body = allowedUpdateState
+        self.addElements()
 
 
     def _testUpdate(self, expectedStatusCode=http.OK):
@@ -34,27 +35,43 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         Tries to change the color of a bikeshed.
         """
         name = self.elementArgs[0][0]
-        self.getElement(name)
-        expectedContent = self.responseContent
+        d = self.getElement(name)
 
-        encodedBody = json.dumps(self.body)
-        self.updateElement(name, encodedBody, self.headers)
+        @d.addCallback
+        def putElement(_):
+            self.expectedContent = self.responseContent
+            encodedBody = json.dumps(self.body)
+            return self.updateElement(name, encodedBody, self.headers)
 
         if expectedStatusCode is http.OK:
-            # A successful PUT does not have a response body
-            self.assertEqual(self.request.code, expectedStatusCode)
-            self._checkContentType(None)
-            expectedContent["color"] = self.body["color"]
+            d.addCallback(self._verifySuccessfulUpdate)
         else:
-            # A failed PUT has a response body
-            self._checkContentType("application/json")
-            self._decodeResponse()
-            self._checkBadRequest(expectedStatusCode)
+            d.addCallback(self._verifyFailedUpdate, expectedStatusCode)
 
-        self.getElement(name)
+        d.addCallback(lambda _: self.getElement(name))
+        d.addCallback(self._verifyExpectedElementState)
+
+        return d
+
+
+    def _verifySuccessfulUpdate(self, _):
+        # A successful PUT does not have a response body
+        self.assertEqual(self.request.code, http.OK)
+        self._checkContentType(None)
+        self.expectedContent["color"] = self.body["color"]
+
+
+    def _verifyFailedUpdate(self, _, expectedStatusCode):
+        # A failed PUT has a response body
+        self._checkContentType("application/json")
+        self._decodeResponse()
+        self._checkBadRequest(expectedStatusCode)
+
+
+    def _verifyExpectedElementState(self, _):
         self.assertEqual(self.request.code, http.OK)
         self._checkContentType("application/json")
-        self.assertEqual(self.responseContent, expectedContent)
+        self.assertEqual(self.responseContent, self.expectedContent)
 
 
     def test_simple(self):
@@ -62,7 +79,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         Test that updating an element works.
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
-        self._testUpdate()
+        return self._testUpdate()
 
 
     def test_missingContentType(self):
@@ -70,7 +87,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         Test that trying to update an element when not specifying the content
         type fails.
         """
-        self._testUpdate(http.UNSUPPORTED_MEDIA_TYPE)
+        return self._testUpdate(http.UNSUPPORTED_MEDIA_TYPE)
 
 
     def test_badContentType(self):
@@ -79,7 +96,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         type fails.
         """
         self.headers.setRawHeaders("Content-Type", ["ZALGO/ZALGO"])
-        self._testUpdate(http.UNSUPPORTED_MEDIA_TYPE)
+        return self._testUpdate(http.UNSUPPORTED_MEDIA_TYPE)
 
 
     def test_nonUpdatableAttribute(self):
@@ -92,7 +109,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self.body = disallowedUpdateState
-        self._testUpdate(http.FORBIDDEN)
+        return self._testUpdate(http.FORBIDDEN)
 
 
     def test_partiallyUpdatableAttributes(self):
@@ -105,7 +122,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self.body = dict(disallowedUpdateState, **allowedUpdateState)
-        self._testUpdate(http.FORBIDDEN)
+        return self._testUpdate(http.FORBIDDEN)
 
 
     def test_completeState(self):
@@ -118,7 +135,7 @@ class ElementUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
         """
         self.headers.setRawHeaders("Content-Type", ["application/json"])
         self.body = dict(allowedUpdateState, **nilpotentUpdateState)
-        self._testUpdate()
+        return self._testUpdate()
 
 
 
@@ -126,49 +143,52 @@ class ManualUpdatingTest(collections.UpdatableCollectionMixin, TestCase):
     """
     Tests updating an element directly.
     """
+    @defer.inlineCallbacks
     def setUp(self):
         collections.UpdatableCollectionMixin.setUp(self)
         self.addElements()
         firstElementIdentifier = self.elementArgs[0][0]
-        self.element = self.collection[firstElementIdentifier]
+        self.element = yield self.collection.get(firstElementIdentifier)
         self.originalState = self.element.toState()
 
 
     def _testUpdate(self, state, exceptionClass=None, exposesValue=True):
+        d = self.element.update(state)
         if exceptionClass is None:
-            self.element.update(state)
-            expectedState = state
+            d.addCallback(self._checkState, state)
         else:
-            try:
-                self.element.update(state)
-                self.fail() # pragma: no cover
-            except exceptionClass, e:
-                if exposesValue:
-                    self.assertIn("currentValue", e.details)
-                else:
-                    self.assertNotIn("currentValue", e.details)
-                
-            expectedState = self.originalState
+            self.assertFailure(d, exceptionClass)
+            d.addCallback(self._checkExposes, exposesValue)
+            d.addCallback(self._checkState, self.originalState)
 
+
+    def _checkState(self, _, expectedState):
         for attribute, value in expectedState.iteritems():
             self.assertEqual(getattr(self.element, attribute), value)
 
 
+    def _checkExposes(self, exception, exposesValue):
+        if exposesValue:
+            self.assertIn("currentValue", exception.details)
+        else:
+            self.assertNotIn("currentValue", exception.details)        
+
+
     def test_nonUpdatableAttribute(self):
         state = dict(disallowedUpdateState)
-        self._testUpdate(state, AttributeValueUpdateError)
+        return self._testUpdate(state, AttributeValueUpdateError)
 
 
     def test_nonUpdatableAttribute_dontLeakValue(self):
         state = dict(disallowedUpdateStateWithHiddenAttribute)
-        self._testUpdate(state, AttributeValueUpdateError, False)
+        return self._testUpdate(state, AttributeValueUpdateError, False)
 
 
     def test_partiallyUpdatableAttributes(self):
         state = dict(disallowedUpdateState, **allowedUpdateState)
-        self._testUpdate(state, AttributeValueUpdateError)
+        return self._testUpdate(state, AttributeValueUpdateError)
 
 
     def test_completeState(self):
         state = dict(allowedUpdateState, **nilpotentUpdateState)
-        self._testUpdate(state)
+        return self._testUpdate(state)

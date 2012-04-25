@@ -3,13 +3,15 @@
 """
 Resources providing the REST API to some objects.
 """
-from urllib import urlencode
-from urlparse import urlsplit, urlunsplit
+import functools
+import urllib
+import urlparse
 
-from twisted.web import http, resource
+from twisted.internet import defer
+from twisted.python import log
+from twisted.web import http, resource, server
 
-from txyoga import errors, interface
-from txyoga.serializers import EncodingResource, reportErrors
+from txyoga import errors, interface, serializers
 
 
 class Created(resource.Resource):
@@ -32,48 +34,106 @@ class Deleted(resource.Resource):
 
 
 
-class CollectionResource(EncodingResource):
+def deferredRenderWithErrorReporting(method):
+    def decorated(self, request):
+        d = defer.maybeDeferred(method, self, request)
+        d.addErrback(_reportError, request, self.defaultEncoder)
+        return server.NOT_DONE_YET
+
+    return decorated
+
+
+def _reportError(reason, request, defaultEncoder):
+    if not interface.ISerializableError.providedBy(reason.value):
+        request.write(repr(reason.value))
+        request.finish()
+        return
+
+    request.encoder = getattr(request, "encoder", defaultEncoder)
+    resource = errors.RESTErrorPage(reason.value)
+    request.write(resource.render(request))
+    request.finish()
+    
+
+
+class DeferredResource(object):
+    def __init__(self, deferred, defaultEncoder):
+        self.deferred = deferred
+        self.defaultEncoder = defaultEncoder
+
+
+    def getChildWithDefault(self, path, request):
+        self.deferred.addCallback(self._getChild, path, request)
+        return self
+
+
+    def _getChild(self, resource, path, request):
+        return resource.getChildWithDefault(path, request)
+
+
+    @deferredRenderWithErrorReporting
+    def render(self, request):
+        return self.deferred.addCallback(self._delayedRender, request)
+
+
+    def _delayedRender(self, resource, request):
+        body = resource.render(request)
+        if body is not server.NOT_DONE_YET:
+            request.write(body)
+            request.finish()
+
+
+    @classmethod
+    def returning(cls, method):
+        """
+        A decorator for methods that return a deferred Resource.
+        """
+        @functools.wraps(method)
+        def decorated(self, *args, **kwargs):
+            deferred = defer.maybeDeferred(method, self, *args, **kwargs)
+            return cls(deferred, self.defaultEncoder)
+        return decorated
+
+
+
+class CollectionResource(serializers.EncodingResource):
     """
     A resource representing a REST collection.
     """
     def __init__(self, collection):
-        resource.Resource.__init__(self)
+        serializers.EncodingResource.__init__(self)
         self._collection = collection
 
 
+    @DeferredResource.returning
     def getChild(self, path, request):
         """
         Gets the resource for an element in the collection for this resource.
 
         If this is a DELETE request addressing an element this collection,
-        deletes the child.  If it is a PUT request addressing an element in
-        this collection which does not exist yet, creates an element
-        accessible at the request path.  Otherwise, attempts to return the
-        resource for the appropriate addressed child, by accessing that child
-        and attempting to adapt it to ``IResource``.
-
-        If that child could not be found, (unless it is being created, of
-        course), returns an error page signaling the missing element.
+        deletes the child. If this is a PUT request request addressing an
+        element in this collection, creates the element and adds (upserts)
+        it to the collection. Otherwise, attempts to get the child element.
+        If that child could not be found, returns an error.
 
         The case for updating an element is not covered in this method: since
         updating is an operation on elements that already exist, that is
         handled by the corresponding ElementResource.
         """
-        try:
-            if request.method == "DELETE" and not request.postpath:
-                self._collection.remove(path)
-                return Deleted()
+        if not request.postpath:
+            if request.method == "DELETE":
+                d = self._collection.remove(path)
+                d.addCallback(lambda _: Deleted())
+                return d
 
-            return resource.IResource(self._collection[path])
-        except KeyError:
-            if request.method == 'PUT' and not request.postpath:
-                return self._createElement(request, identifier=path)
+            elif request.method == "PUT":
+                return self._createElement(request, path)
 
-            return self._missingElement(request, path)
+        return self._collection.get(path).addCallback(resource.IResource)
 
 
-    @reportErrors
-    def _createElement(self, request, decoder, identifier=None):
+    @serializers.withDecoder
+    def _createElement(self, request, identifier=None):
         """
         Attempts to create an element.
 
@@ -83,28 +143,37 @@ class CollectionResource(EncodingResource):
         identifier does not match the identifier of the new element,
         `IdentifierError` is raised.
         """
-        state = decoder(request.content)
+        state = request.decoder(request.content)
         element = self._collection.createElementFromState(state)
 
         if identifier is not None:
             actualIdentifier = getattr(element, element.identifyingAttribute)
             if actualIdentifier != identifier:
-                raise errors.IdentifierError(identifier, actualIdentifier)
+                e = errors.IdentifierError(identifier, actualIdentifier)
+                return defer.fail(e)
 
-        self._collection.add(element)
-        return Created()
+        d = self._collection.add(element)
+        d.addCallback(lambda _: Created())
+        return d
 
-    
-    @reportErrors
-    def _missingElement(self, request, identifier):
+
+    @deferredRenderWithErrorReporting
+    def render_POST(self, request):
         """
-        Reports client about a missing element.
+        Creates a new element in the collection.
         """
-        raise errors.MissingElementError(identifier)
+        d = self._createElement(request)
+
+        @d.addCallback
+        def finish(resource):
+            request.write(resource.render(request))
+            request.finish()
+
+        return d
 
 
-    @reportErrors
-    def render_GET(self, request, encoder):
+    @deferredRenderWithErrorReporting
+    def render_GET(self, request):
         """
         Displays the collection.
 
@@ -113,28 +182,27 @@ class CollectionResource(EncodingResource):
         time. Each page will have links to the previous and next
         pages.
         """
+        encoder = request.encoder = self._getEncoder(request)
+
         start, stop = self._getBounds(request)
         url = request.prePathURL()
         prevURL, nextURL = self._getPaginationURLs(url, start, stop)
+        response = {"prev": prevURL, "next": nextURL}
 
-        elements = self._collection[start:stop]
-        attrs = self._collection.exposedElementAttributes
-        results = [element.toState(attrs) for element in elements]
+        d = self._collection.query(start=start, stop=stop)
 
-        if (stop - start) > len(elements):
-            # Not enough elements -> end of the collection
-            nextURL = None
+        def _buildResponse(elements):
+            attrs = self._collection.exposedElementAttributes
+            response["results"] = [e.toState(attrs) for e in elements]
+        
+            if (stop - start) > len(elements):
+                # Not enough elements -> end of the collection
+                response["next"] = None
 
-        response = {"results": results, "prev": prevURL, "next": nextURL}
-        return encoder(response)
+            request.write(request.encoder(response))
+            request.finish()
 
-
-    def render_POST(self, request):
-        """
-        Creates a new element in the collection.
-        """
-        resource = self._createElement(request)
-        return resource.render(request)
+        return d.addCallback(_buildResponse)
 
 
     def _getBounds(self, request):
@@ -150,10 +218,10 @@ class CollectionResource(EncodingResource):
         """
         Produces the URLs for the next page and the previous one.
         """
-        scheme, netloc, path, _, _ = urlsplit(thisURL)
+        scheme, netloc, path, _, _ = urlparse.urlsplit(thisURL)
         def buildURL(start, stop):
-            query = urlencode([("start", start), ("stop", stop)])
-            return urlunsplit((scheme, netloc, path, query, ""))
+            query = urllib.urlencode([("start", start), ("stop", stop)])
+            return urlparse.urlunsplit((scheme, netloc, path, query, ""))
 
         pageSize = stop - start
 
@@ -192,34 +260,42 @@ def _getBound(args, key, default=0):
 
 
 
-class ElementResource(EncodingResource):
+class ElementResource(serializers.EncodingResource):
     """
     A resource representing an element in a collection.
     """
     def __init__(self, element):
-        resource.Resource.__init__(self)
-
+        serializers.EncodingResource.__init__(self)
         self._element = element
 
-        for childName in element.children:
-            child = getattr(element, childName)
-            self.putChild(childName, resource.IResource(child))
+
+    def getChild(self, path, request):
+        child = getattr(self._element, path)
+        return resource.IResource(child)
 
 
-    @reportErrors
-    def render_GET(self, request, encoder):
+    @deferredRenderWithErrorReporting
+    @serializers.withEncoder
+    def render_GET(self, request):
         """
         Displays the element.
         """
         state = self._element.toState()
-        return encoder(state)
+        encoded = request.encoder(state)
+        request.write(encoded)
+        request.finish()
 
 
-    @reportErrors
-    def render_PUT(self, request, decoder):
+    @deferredRenderWithErrorReporting
+    @serializers.withDecoder
+    def render_PUT(self, request):
         """
         Updates the element.
         """
-        state = decoder(request.content)
-        self._element.update(state)
-        return ""
+        state = request.decoder(request.content)
+        d = self._element.update(state)
+        @d.addCallback
+        def finish(_):
+            request.write("")
+            request.finish()
+        return d

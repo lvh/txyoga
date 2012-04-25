@@ -3,6 +3,8 @@
 """
 Tests for bad (malformed, nonsensical, ...) requests.
 """
+import functools
+
 from twisted.web import http, http_headers
 from twisted.trial.unittest import TestCase
 
@@ -18,18 +20,20 @@ class _BaseFailingRequestTest(collections.PaginatedCollectionMixin):
         A generic bad request.
         """
         self.addElements()
-        makeRequest()
-        self._checkBadRequest(expectedCode)
+
+        def _assert(_):
+            self._checkBadRequest(expectedCode)
+
+        return makeRequest().addCallback(_assert)
 
 
     def _test_badCollectionRequest(self, args=None, headers=None,
-                         expectedCode=http.BAD_REQUEST):
+                                   expectedCode=http.BAD_REQUEST):
         """
         A request for a collection that's expected to fail.
         """
-        def makeRequest():
-            self.getElements(args, headers)
-        self._test_badRequest(makeRequest, expectedCode)
+        makeRequest = functools.partial(self.getElements, args, headers)
+        return self._test_badRequest(makeRequest, expectedCode)
 
 
     def _test_badElementRequest(self, name, args=None, headers=None,
@@ -37,9 +41,8 @@ class _BaseFailingRequestTest(collections.PaginatedCollectionMixin):
         """
         A request for a particular element that's expected to fail.
         """
-        def makeRequest():
-            self.getElement(name, args, headers)
-        self._test_badRequest(makeRequest, expectedCode)
+        makeRequest = functools.partial(self.getElement, name, args, headers)
+        return self._test_badRequest(makeRequest, expectedCode)
 
 
 
@@ -52,7 +55,7 @@ class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
         Providing multiple start values when requesting a page of a collection
         results in an error.
         """
-        self._test_badCollectionRequest({"start": [0, 1]})
+        return self._test_badCollectionRequest({"start": [0, 1]})
 
 
     def test_multipleStops(self):
@@ -60,7 +63,7 @@ class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
         Providing multiple stop values when requesting a page of a collection
         results in an error.
         """
-        self._test_badCollectionRequest({"stop": [0, 1]})
+        return self._test_badCollectionRequest({"stop": [0, 1]})
 
 
     def test_negativePageSize(self):
@@ -69,7 +72,7 @@ class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
         requesting a negative number of elements) when requesting a page of a
         collection results in an error.
         """
-        self._test_badCollectionRequest({"start": [0], "stop": [-1]})
+        return self._test_badCollectionRequest({"start": [0], "stop": [-1]})
 
 
     def test_pageTooBig(self):
@@ -78,7 +81,7 @@ class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
         requesting a page of a collection results in an error.
         """
         stop = self.collectionClass.maxPageSize + 1
-        self._test_badCollectionRequest({"start": [0], "stop": [stop]})
+        return self._test_badCollectionRequest({"start": [0], "stop": [stop]})
 
 
     def test_startNotInteger(self):
@@ -86,7 +89,7 @@ class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
         Providing a start value that isn't an integer when requesting a page
         of a collection results in an error.
         """
-        self._test_badCollectionRequest({"start": ["ZALGO"]})
+        return self._test_badCollectionRequest({"start": ["ZALGO"]})
 
 
     def test_stopNotInteger(self):
@@ -94,7 +97,7 @@ class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
         Providing a stop value that isn't an integer when requesting a page
         of a collection results in an error.
         """
-        self._test_badCollectionRequest({"stop": ["ZALGO"]})
+        return self._test_badCollectionRequest({"stop": ["ZALGO"]})
 
 
     def test_startAndStopNotInteger(self):
@@ -102,7 +105,7 @@ class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
         Providing a start value and a stop value that aren't integers when
         requesting a page of a collection results in an error.
         """
-        self._test_badCollectionRequest({"start": ["ZALGO"], "stop": ["ZALGO"]})
+        return self._test_badCollectionRequest({"start": ["ZALGO"], "stop": ["ZALGO"]})
 
 
     def test_badAcceptHeader(self):
@@ -112,7 +115,7 @@ class BadCollectionRequestTests(_BaseFailingRequestTest, TestCase):
         """
         headers = http_headers.Headers()
         headers.setRawHeaders("Accept", ["text/bogus"])
-        self._test_badCollectionRequest(None, headers, http.NOT_ACCEPTABLE)
+        return self._test_badCollectionRequest(None, headers, http.NOT_ACCEPTABLE)
 
 
 
@@ -125,7 +128,7 @@ class BadElementRequestTests(_BaseFailingRequestTest, TestCase):
         Requesting a missing element, results in a response that the element
         was not found (404).
         """
-        self._test_badElementRequest("bogus", None, None, http.NOT_FOUND)
+        return self._test_badElementRequest("bogus", None, None, http.NOT_FOUND)
 
 
     def test_missingElement_bogusAcceptHeader(self):
@@ -135,7 +138,7 @@ class BadElementRequestTests(_BaseFailingRequestTest, TestCase):
         """
         headers = http_headers.Headers()
         headers.setRawHeaders("Accept", ["text/bogus"])
-        self._test_badElementRequest("bogus", None, headers, http.NOT_FOUND)
+        return self._test_badElementRequest("bogus", None, headers, http.NOT_FOUND)
 
 
     def test_getElement_bogusAcceptHeader(self):
@@ -146,4 +149,4 @@ class BadElementRequestTests(_BaseFailingRequestTest, TestCase):
         headers = http_headers.Headers()
         headers.setRawHeaders("Accept", ["text/bogus"])
         name, _, _ = self.elementArgs[0]
-        self._test_badElementRequest(name, None, headers, http.NOT_ACCEPTABLE)
+        return self._test_badElementRequest(name, None, headers, http.NOT_ACCEPTABLE)

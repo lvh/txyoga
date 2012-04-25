@@ -16,18 +16,16 @@ class RESTErrorPage(resource.Resource):
 
     Wraps a L{SerializableError}, and produces a pretty serializable form.
     """
-    def __init__(self, exception, encoder, contentType):
+    def __init__(self, exception):
         resource.Resource.__init__(self)
-
         self.exception = exception
-        self.encoder = encoder
-        self.contentType = contentType
 
 
     def render(self, request):
-        request.setHeader("Content-Type", self.contentType)
+        encoder = request.encoder
+        request.setHeader("Content-Type", encoder.contentType)
         request.setResponseCode(self.exception.responseCode)
-        return self.encoder(self.exception)
+        return encoder(self.exception)
 
 
 
@@ -77,8 +75,6 @@ class UnacceptableRequest(SerializableError):
     """
     Raised when the requested resource could not be provided in one of the
     accepted content types.
-
-    This happens on GET.
     """
     responseCode = http.NOT_ACCEPTABLE
 
@@ -113,6 +109,32 @@ class MissingElementError(SerializableError):
 
 
 UNSPECIFIED = object()
+
+
+
+class InvalidElementStateError(SerializableError):
+    """
+    Raised when trying to put an element in an invalid state.
+    """
+    responseCode = http.FORBIDDEN
+
+    def __init__(self, state):
+        message = "Invalid element state"
+        details = {"state": state}
+        SerializableError.__init__(self, message, details)
+
+
+
+class ElementStateMissingAttributeError(SerializableError):
+    """
+    Raised when some element state is missing a required attribute.
+    """
+    responseCode = http.FORBIDDEN
+
+    def __init__(self, state, missingAttribute):
+        message = "Missing attribute"
+        details = {"state": state, "missingAttribute": missingAttribute}
+        SerializableError.__init__(self, message, details)
 
 
 

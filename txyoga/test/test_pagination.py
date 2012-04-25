@@ -24,8 +24,10 @@ class PaginationTest(collections.PaginatedCollectionMixin, TestCase):
         is one).
         """
         self.addElements()
-        self.getElements()
+        return self.getElements().addCallback(self._checkFirstPage)
 
+
+    def _checkFirstPage(self, _):
         numResults = len(self.responseContent["results"])
         self.assertEqual(numResults, self.collectionClass.pageSize)
 
