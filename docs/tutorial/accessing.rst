@@ -122,7 +122,7 @@ behind the scenes.
 
    >>> headers = response.getheaders()
    >>> headerKeys = [k for k, v in headers]
-   >>> expectedKeys = ["date", "content-type", "content-length", "server"]
+   >>> expectedKeys = ["date", "content-type", "transfer-encoding", "server"]
    >>> assert all(k in headerKeys for k in expectedKeys)
 
 txyoga will never return responses with missing content types. A later
