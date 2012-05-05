@@ -64,7 +64,7 @@ or PUT, specifying the encoding is mandatory.
    >>> data = {"name": u"alice", "salary": 100, "title": "engineer"}
    >>> headers = {"content-type": "application/json"}
    >>> response = example.put(json.dumps(data), headers, "alice")
-
+   
 As usual, we get the appropriate response:
 
 .. doctest::
@@ -79,7 +79,7 @@ Updating an element
 -------------------
 
 The company's success has really gotten to lvh's head. He's not happy
-unless we give him a ridiculius new title.
+unless we give him a ridiculous new title.
 
 To do that, we update his record. In REST, updates are typically done
 using a PUT request.

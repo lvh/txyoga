@@ -34,9 +34,9 @@ class Example(object):
         """
         Gets a particular collection or element.
         """
-        return self._makeRequest("GET", "", {}, *parts)
+        return self._makeRequest("GET", "", {"Accept": "application/json"}, *parts)
 
-
+        
     def delete(self, *parts):
         """
         Deletes a particular element.
